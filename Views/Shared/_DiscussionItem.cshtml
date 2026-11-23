@@ -1,0 +1,19 @@
+@model DiscussionItemViewModel
+@{var row=Model.Item;var context=Model.Page;}
+<div class="cm-discussion @(row.IsHidden?"cm-hidden":"")">
+<header><strong>@(row.User?.DeletedAt==null?row.User?.FullName:"Người dùng")</strong><span>@row.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span></header>
+<div class="cm-status">@if(row.IsPinned){<span class="cm-badge">Đã ghim</span>}@if(row.IsResolved){<span class="cm-badge cm-solved">Đã giải quyết</span>}@if(row.IsHidden){<span class="cm-badge">Đang ẩn</span>}</div>
+@if(row.Title!=null){<h3>@row.Title</h3>}
+@if(row.VideoTimestampSec.HasValue){
+@if(context.InLearn || !context.CanModerate){<a class="cm-timestamp" asp-controller="Learning" asp-action="Learn" asp-route-id="@context.CourseId" asp-route-lessonId="@context.Lesson.Id" asp-route-seek="@row.VideoTimestampSec">Mốc video @UiText.Duration(row.VideoTimestampSec.Value)</a>}
+else{<span class="cm-timestamp">Mốc video @UiText.Duration(row.VideoTimestampSec.Value)</span>}
+}
+<p class="cm-text">@row.Content</p>
+<div class="cm-actions">
+@if(!row.IsHidden && row.UserId!=context.UserId){<form asp-controller="Community" asp-action="Vote" asp-area="" method="post"><partial name="_DiscussionContext" model="context"/><input type="hidden" name="id" value="@row.Id"/><button class="cm-action @(context.VotedIds.Contains(row.Id)?"is-voted":"")" aria-pressed="@(context.VotedIds.Contains(row.Id).ToString().ToLowerInvariant())"><i data-lucide="thumbs-up" aria-hidden="true"></i>@(context.VotedIds.Contains(row.Id)?"Bỏ hữu ích":"Hữu ích") · @row.UpvoteCount</button></form>}
+else {<span class="cm-muted">@row.UpvoteCount bình chọn hữu ích</span>}
+@if(context.CanModerate){<form asp-controller="Community" asp-action="Moderate" asp-area="" method="post"><partial name="_DiscussionContext" model="context"/><input type="hidden" name="id" value="@row.Id"/>
+@if(row.ParentId==null){<button class="cm-action" name="action" value="pin">@(row.IsPinned?"Bỏ ghim":"Ghim")</button><button class="cm-action" name="action" value="resolve">@(row.IsResolved?"Mở lại":"Đã giải quyết")</button>}
+<button class="cm-action" name="action" value="@(row.IsHidden?"show":"hide")">@(row.IsHidden?"Hiện lại":"Ẩn spam")</button></form>}
+</div></div>
+

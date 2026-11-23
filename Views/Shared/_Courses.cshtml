@@ -1,0 +1,19 @@
+@model List<Course>
+@* Lưới thẻ khóa học *@
+@if (Model.Count == 0)
+{
+    <div class="rounded-2xl border border-dashed border-blue-200 dark:border-slate-700 bg-blue-50/50 dark:bg-slate-900 p-10 text-center">
+        <div class="mx-auto w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4"><i data-lucide="search-x" class="w-7 h-7"></i></div>
+        <h2 class="text-lg font-extrabold">Không tìm thấy khóa học phù hợp</h2>
+        <p class="text-sm text-slate-500 mt-2">Thử bỏ bớt bộ lọc hoặc tìm bằng từ khóa khác.</p>
+    </div>
+}
+else
+{
+    <div class="catalog-grid grid sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        @foreach (var c in Model)
+        {
+            <partial name="_CourseCard" model="c" />
+        }
+    </div>
+}

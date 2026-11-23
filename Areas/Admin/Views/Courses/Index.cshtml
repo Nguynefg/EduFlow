@@ -1,0 +1,108 @@
+﻿@model AdminCoursesViewModel
+@{
+    ViewData["Title"] = "Duyệt khóa học";
+    var tabs = new (string Status, string Icon)[]
+    {
+        (CourseStatus.Pending, "hourglass"),
+        (CourseStatus.Published, "globe"),
+        (CourseStatus.Rejected, "circle-x"),
+        (CourseStatus.Hidden, "eye-off"),
+        (CourseStatus.Draft, "file-pen-line"),
+        ("all", "layers")
+    };
+}
+
+<div class="admin-heading">
+    <div>
+        <span class="eyebrow">KHÓA HỌC</span>
+        <h1>Quản lý khóa học</h1>
+        <p class="muted">@Model.PendingCount khóa học đang chờ duyệt.</p>
+    </div>
+    <a asp-area="Admin" asp-controller="Instructor" asp-action="Create" class="button">Tạo khóa học</a>
+</div>
+
+<!-- Lọc theo trạng thái -->
+<nav class="admin-tabs" aria-label="Lọc theo trạng thái">
+    @foreach (var t in tabs)
+    {
+        var active = t.Status == "all" ? string.IsNullOrEmpty(Model.Status) || Model.Status == "all" : Model.Status == t.Status;
+        <a asp-action="Index" asp-route-status="@t.Status" class="@(active ? "is-active" : "")" aria-current="@(active ? "page" : null)">
+            <i data-lucide="@t.Icon"></i>@(t.Status == "all" ? "Tất cả" : UiText.CourseStatus(t.Status))
+        </a>
+    }
+</nav>
+
+<form method="get" class="panel admin-filter-bar">
+    <input type="hidden" name="status" value="@Model.Status" />
+    <input name="q" value="@Model.Query" placeholder="Tìm tên khóa học hoặc giảng viên..." />
+    <button class="button"><i data-lucide="search" class="w-4 h-4"></i>Tìm kiếm</button>
+</form>
+
+<section class="panel admin-section">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Khóa học</th><th>Giảng viên</th><th>Danh mục</th><th>Giá</th><th>Cập nhật</th><th>Trạng thái</th>
+                    <th class="col-actions">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model.Courses)
+                {
+                    var updated = c.UpdatedAt ?? c.CreatedAt;
+                    <tr>
+                        <td>
+                            <span class="admin-cell-main">@c.Title</span>
+                            <span class="admin-cell-meta"><i data-lucide="signal"></i>@UiText.Level(c.Level)</span>
+                        </td>
+                        <td>@c.Instructor?.FullName</td>
+                        <td>@c.Category?.Name</td>
+                        <td class="nowrap"><strong>@UiText.Price(c.CurrentPrice)</strong></td>
+                        <td class="nowrap"><span class="admin-cell-date">@updated.ToString("dd/MM/yyyy")<small>@updated.ToString("HH:mm")</small></span></td>
+                        <td class="nowrap"><span class="badge @UiText.CourseStatusCss(c.Status)">@UiText.CourseStatus(c.Status)</span></td>
+                        <td class="col-actions">
+                            <div class="icon-actions">
+                                <a asp-area="Admin" asp-controller="Instructor" asp-action="Edit" asp-route-id="@c.Id" class="icon-btn view" data-tip="Sửa thông tin" aria-label="Sửa thông tin"><i data-lucide="pencil"></i></a>
+                                <a asp-area="Admin" asp-controller="Curriculum" asp-action="Index" asp-route-id="@c.Id" class="icon-btn view" data-tip="Quản lý nội dung" aria-label="Quản lý nội dung"><i data-lucide="list-tree"></i></a>
+                                <a asp-action="Details" asp-route-id="@c.Id" class="icon-btn view" data-tip="Xem và kiểm duyệt" aria-label="Xem và kiểm duyệt"><i data-lucide="scan-eye"></i></a>
+                                <form asp-area="Admin" asp-controller="Courses" asp-action="Delete" method="post" data-confirm="Xóa khóa học &quot;@c.Title&quot;? Khóa học sẽ không còn hiển thị trong danh sách và trên trang bán khóa học.">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button type="submit" class="action-btn danger-outline" aria-label="Xóa khóa học @c.Title"><i data-lucide="trash-2" aria-hidden="true"></i>Xóa</button>
+                                </form>
+                                @if (c.Status == CourseStatus.Pending)
+                                {
+                                    <form asp-action="Approve" method="post" data-confirm="Duyệt và xuất bản khóa học @c.Title?">
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button class="icon-btn approve" data-tip="Duyệt và xuất bản" aria-label="Duyệt"><i data-lucide="badge-check"></i></button>
+                                    </form>
+                                    <button type="button" class="icon-btn danger" data-tip="Từ chối" aria-label="Từ chối"
+                                            data-reason="rejectCourseDialog" data-value="@c.Id" data-name="@c.Title"><i data-lucide="circle-x"></i></button>
+                                }
+                                @if (c.Status == CourseStatus.Published)
+                                {
+                                    <a asp-area="" asp-controller="Courses" asp-action="Details" asp-route-id="@c.Id" target="_blank" class="icon-btn edit" data-tip="Xem trang công khai" aria-label="Trang công khai"><i data-lucide="square-arrow-out-up-right"></i></a>
+                                    <button type="button" class="icon-btn warn" data-tip="Tạm ẩn khóa học" aria-label="Tạm ẩn"
+                                            data-reason="hideCourseDialog" data-value="@c.Id" data-name="@c.Title"><i data-lucide="eye-off"></i></button>
+                                }
+                                @if (c.Status == CourseStatus.Hidden)
+                                {
+                                    <form asp-action="Unhide" method="post">
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button class="icon-btn approve" data-tip="Hiện lại khóa học" aria-label="Hiện lại"><i data-lucide="eye"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.Courses.Count == 0)
+        {
+            <div class="admin-empty"><i data-lucide="inbox"></i><h3>Không có khóa học nào</h3></div>
+        }
+    </div>
+</section>
+
+<partial name="_RejectCourseDialog" />

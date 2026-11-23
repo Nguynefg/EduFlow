@@ -1,0 +1,330 @@
+﻿@model CourseDetailViewModel
+@{
+    var course = Model.Course;
+    ViewData["Title"] = course.Title;
+    var sections = course.Sections.OrderBy(s => s.OrderIndex).ToList();
+    var lessons = sections.SelectMany(s => s.Lessons).ToList();
+    var totalSec = lessons.Sum(l => l.DurationSec);
+    var videoSec = lessons.Where(l => l.LessonType == LessonType.Video).Sum(l => l.DurationSec);
+    var videoCount = lessons.Count(l => l.LessonType == LessonType.Video);
+    var articleCount = lessons.Count(l => l.LessonType == LessonType.Article);
+    var quizCount = lessons.Count(l => l.LessonType == LessonType.Quiz);
+    var resourceCount = lessons.Sum(l => l.Resources.Count);
+    var trailerEmbed = VideoHelper.YouTubeEmbed(course.TrailerUrl);
+    var hasTrailer = !string.IsNullOrEmpty(course.TrailerUrl);
+    var discount = course.Price > 0 && course.CurrentPrice < course.Price
+        ? (int)Math.Round((course.Price - course.CurrentPrice) * 100 / course.Price) : 0;
+    var enrollPercent = Model.IsEnrolled && lessons.Count > 0 ? (int)Math.Round(Model.CompletedLessonIds.Count(id => lessons.Any(l => l.Id == id)) * 100.0 / lessons.Count, MidpointRounding.AwayFromZero) : 0;
+
+    string LessonIcon(string type) => type == LessonType.Video ? "play-circle" : type == LessonType.Quiz ? "list-checks" : "file-text";
+    string TotalLength(int sec)
+    {
+        var t = TimeSpan.FromSeconds(sec);
+        return t.TotalHours >= 1 ? $"{(int)t.TotalHours} giờ {t.Minutes} phút" : $"{Math.Max(1, t.Minutes)} phút";
+    }
+}
+
+<div class="cd-layout">
+    <!-- ===== CỘT TRÁI ===== -->
+    <div class="cd-main">
+        <nav class="cd-crumbs" aria-label="Breadcrumb">
+            <a asp-action="Index">Khóa học</a>
+            <span>/</span>
+            <a href="@Url.RouteUrl("category-slug",new{slug=course.Category?.Slug})">@course.Category?.Name</a>
+        </nav>
+
+        <h1 class="cd-title">@course.Title</h1>
+
+        <div class="cd-meta">
+            <span><i data-lucide="star" class="cd-star"></i>@(course.AvgRating > 0 ? course.AvgRating.ToString("0.0") : "Chưa có đánh giá")</span>
+            <span><i data-lucide="users"></i>@Model.StudentCount.ToString("N0") học viên</span>
+            <span><i data-lucide="user-round"></i>@course.Instructor?.FullName</span>
+            <span><i data-lucide="signal"></i>@UiText.Level(course.Level)</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(course.ShortDesc))
+        {
+            <p class="cd-lead">@course.ShortDesc</p>
+        }
+
+        @if (Model.IsEnrolled)
+        {
+            <div class="cd-progress">
+                <div class="cd-progress-info">
+                    <strong>Bạn đã hoàn thành @enrollPercent%</strong>
+                    <span>@Model.CompletedLessonIds.Count(id => lessons.Any(l => l.Id == id)) / @lessons.Count bài học</span>
+                    <div class="cd-bar"><i style="width:@enrollPercent%"></i></div>
+                </div>
+                <a class="cd-btn" asp-controller="Learning" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@Model.ContinueLessonId">
+                    <i data-lucide="play"></i>@(enrollPercent >= 100 ? "Học lại" : enrollPercent > 0 ? "Tiếp tục học" : "Bắt đầu học")
+                </a>
+            </div>
+        }
+
+        <!-- Nội dung khóa học -->
+        <section class="cd-section">
+            <h2>Nội dung khóa học</h2>
+            <div class="cd-outline-head">
+                <span>@sections.Count chương <b>•</b> @lessons.Count bài học @if (totalSec > 0) { <b>•</b> <text>@TotalLength(totalSec) tổng thời lượng</text> }</span>
+                <button type="button" class="cd-link" data-expand-all>Mở rộng tất cả</button>
+            </div>
+
+            <div class="cd-outline">
+                @{ var chapterNo = 0; }
+                @foreach (var chap in sections)
+                {
+                    chapterNo++;
+                    var items = chap.Lessons.OrderBy(l => l.OrderIndex).ToList();
+                    var done = items.Count(l => Model.CompletedLessonIds.Contains(l.Id));
+                    var pct = items.Count == 0 ? 0 : done * 100 / items.Count;
+                    var sectionLocked = Model.IsEnrolled && items.Count > 0 && items.All(l => Model.LockedLessonIds.Contains(l.Id));
+                    <details class="cd-chapter" open="@(chapterNo == 1)">
+                        <summary>
+                            <i data-lucide="chevron-down" class="cd-caret"></i>
+                            <span class="cd-chapter-title">Chương @chapterNo - @chap.Title</span>
+                            @if (sectionLocked) { <i data-lucide="lock" class="cd-lock"></i> }
+                            @if (Model.IsEnrolled)
+                            {
+                                <span class="cd-ring @(pct >= 100 ? "is-done" : "")" style="--p:@pct" title="Hoàn thành @done/@items.Count bài" aria-label="Hoàn thành @done trên @items.Count bài"></span>
+                            }
+                            else
+                            {
+                                <span class="cd-chapter-meta">@items.Count bài @if (items.Sum(l => l.DurationSec) > 0) { <text>· @UiText.Duration(items.Sum(l => l.DurationSec))</text> }</span>
+                            }
+                        </summary>
+                        <ul>
+                            @foreach (var lesson in items)
+                            {
+                                var completed = Model.CompletedLessonIds.Contains(lesson.Id);
+                                var locked = Model.LockedLessonIds.Contains(lesson.Id);
+                                <li class="@(completed ? "is-done" : "") @(locked ? "is-locked" : "")">
+                                    <i data-lucide="@LessonIcon(lesson.LessonType)" class="cd-lesson-icon"></i>
+                                    @if (Model.IsEnrolled && !locked)
+                                    {
+                                        <a asp-controller="Learning" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@lesson.Id">@lesson.Title</a>
+                                    }
+                                    else if (!Model.IsEnrolled && lesson.IsFreePreview)
+                                    {
+                                        <a asp-action="Preview" asp-route-id="@lesson.Id">@lesson.Title</a>
+                                    }
+                                    else
+                                    {
+                                        <span>@lesson.Title</span>
+                                    }
+                                    @if (completed) { <i data-lucide="check" class="cd-check"></i> }
+                                    @if (locked) { <i data-lucide="lock" class="cd-lock"></i> }
+                                    @if (!Model.IsEnrolled && lesson.IsFreePreview) { <span class="cd-chip">Học thử</span> }
+                                    <small>
+                                        @if (lesson.LessonType == LessonType.Quiz) { @(lesson.Questions.Count) <text> câu hỏi</text> }
+                                        else if (lesson.DurationSec > 0) { @UiText.Duration(lesson.DurationSec) }
+                                    </small>
+                                </li>
+                            }
+                            @if (items.Count == 0)
+                            {
+                                <li class="cd-empty">Chương này chưa có bài học.</li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </div>
+        </section>
+
+        @if (!string.IsNullOrEmpty(course.Objectives))
+        {
+            <section class="cd-section">
+                <h2>Bạn sẽ học được gì</h2>
+                <ul class="cd-checklist">
+                    @foreach (var line in course.Objectives.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <li><i data-lucide="check"></i>@line</li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @if (!string.IsNullOrEmpty(course.Requirements))
+        {
+            <section class="cd-section">
+                <h2>Yêu cầu đầu vào</h2>
+                <ul class="cd-bullets">
+                    @foreach (var line in course.Requirements.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <li>@line</li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @if (!string.IsNullOrEmpty(course.Description))
+        {
+            <section class="cd-section">
+                <h2>Mô tả khóa học</h2>
+                <div class="rich-content cd-rich">@RichText.Render(VideoHelper.ProtectHtml(course.Description,Url.Action("CourseAsset","MediaStream",new{id=course.Id})!))</div>
+            </section>
+        }
+
+        <section class="cd-section">
+            <h2>Giảng viên</h2>
+            <div class="cd-author">
+                @if (!string.IsNullOrEmpty(course.Instructor?.AvatarUrl))
+                {
+                    <img src="@course.Instructor.AvatarUrl" alt="" />
+                }
+                else
+                {
+                    <span class="cd-avatar">@course.Instructor?.FullName.FirstOrDefault()</span>
+                }
+                <div>
+                    <strong>@course.Instructor?.FullName</strong>
+                    @if (!string.IsNullOrEmpty(course.Instructor?.InstructorProfile?.Headline))
+                    {
+                        <small>@course.Instructor.InstructorProfile.Headline</small>
+                    }
+                    @if (!string.IsNullOrEmpty(course.Instructor?.Bio))
+                    {
+                        <p class="preserve">@course.Instructor.Bio</p>
+                    }
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ===== CỘT PHẢI: thẻ mua khóa học ===== -->
+    <aside class="cd-side">
+        <div class="cd-card">
+            <div class="cd-cover">
+                <partial name="_CourseCover" model="course" />
+                @if (hasTrailer)
+                {
+                    <button type="button" class="cd-play" data-trailer-open aria-label="Xem video giới thiệu"><i data-lucide="play"></i></button>
+                }
+            </div>
+
+            @if (!Model.IsEnrolled && !Model.IsOwner)
+            {
+                <div class="cd-price">
+                    <strong class="@(course.CurrentPrice == 0 ? "is-free" : "")">@UiText.Price(course.CurrentPrice)</strong>
+                    @if (discount > 0)
+                    {
+                        <del>@UiText.Price(course.Price)</del>
+                        <em>Giảm @discount%</em>
+                    }
+                </div>
+                @if (discount > 0 && course.DiscountEnd != null)
+                {
+                    <p class="cd-sale-end"><i data-lucide="alarm-clock"></i>Ưu đãi kết thúc @course.DiscountEnd.Value.ToString("dd/MM/yyyy")</p>
+                }
+            }
+
+            <div class="cd-actions">
+                @if (Model.IsEnrolled)
+                {
+                    <a class="cd-btn" asp-controller="Learning" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@Model.ContinueLessonId">
+                        <i data-lucide="play"></i>@(enrollPercent > 0 ? "Tiếp tục học" : "Vào học ngay")
+                    </a>
+                }
+                else if (Model.IsOwner)
+                {
+                    <a class="cd-btn" asp-controller="Curriculum" asp-action="Index" asp-route-id="@course.Id"><i data-lucide="settings-2"></i>Quản lý nội dung</a>
+                }
+                else if (User.Identity?.IsAuthenticated != true)
+                {
+                    <a class="cd-btn" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Url.Action("Details", new { id = course.Id })">
+                        @(course.CurrentPrice == 0 ? "Đăng nhập để học miễn phí" : "Đăng nhập để mua")
+                    </a>
+                }
+                else
+                {
+                    <form asp-action="Enroll" asp-route-id="@course.Id" method="post" class="flex-1"
+                          >
+                        <button class="cd-btn w-full">@(course.CurrentPrice == 0 ? "Thêm khóa miễn phí vào giỏ" : "Thêm vào giỏ hàng")</button>
+                    </form>
+                }
+                <button type="button" class="cd-icon-btn" data-copy-link title="Sao chép liên kết khóa học" aria-label="Sao chép liên kết khóa học"><i data-lucide="share-2"></i></button>
+            </div>
+            @if (!Model.IsEnrolled && !Model.IsOwner && course.CurrentPrice > 0)
+            {
+                <p class="cd-note">Thanh toán qua cổng trực tuyến. Quyền học được cấp sau khi xác nhận thanh toán thành công.</p>
+            }
+
+            <div class="cd-includes">
+                <h3>Khóa học bao gồm</h3>
+                <ul>
+                    @if (videoCount > 0) { <li><i data-lucide="circle-play"></i>@(videoSec > 0 ? TotalLength(videoSec) + " video theo yêu cầu" : videoCount + " video bài giảng")</li> }
+                    @if (articleCount > 0) { <li><i data-lucide="newspaper"></i>@articleCount bài viết</li> }
+                    @if (quizCount > 0) { <li><i data-lucide="list-checks"></i>@quizCount bài kiểm tra</li> }
+                    @if (resourceCount > 0) { <li><i data-lucide="cloud-download"></i>@resourceCount tài liệu tải về</li> }
+                    <li><i data-lucide="smartphone"></i>Học trên điện thoại và máy tính</li>
+                    <li><i data-lucide="infinity"></i>Truy cập trọn đời</li>
+                </ul>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<partial name="_CourseReviews" model="Model.Reviews"/>
+
+@if (hasTrailer)
+{
+    <dialog class="cd-trailer" data-trailer>
+        <button type="button" class="cd-trailer-close" data-trailer-close aria-label="Đóng"><i data-lucide="x"></i></button>
+        @if (trailerEmbed != null)
+        {
+            <iframe data-src="@trailerEmbed?autoplay=1" title="Video giới thiệu" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        }
+        else
+        {
+            <video src="@Url.Action("Trailer","MediaStream",new{id=course.Id})" controls></video>
+        }
+    </dialog>
+}
+
+@section Styles { <link rel="stylesheet" href="~/css/community.css" asp-append-version="true"/> }
+
+@section Scripts {
+    <script>
+        (function () {
+            // Mở rộng / thu gọn tất cả chương
+            var btn = document.querySelector('[data-expand-all]');
+            var chapters = document.querySelectorAll('.cd-chapter');
+            function sync() {
+                var allOpen = Array.prototype.every.call(chapters, function (d) { return d.open; });
+                if (btn) btn.textContent = allOpen ? 'Thu gọn tất cả' : 'Mở rộng tất cả';
+            }
+            if (btn) btn.addEventListener('click', function () {
+                var open = !Array.prototype.every.call(chapters, function (d) { return d.open; });
+                chapters.forEach(function (d) { d.open = open; });
+                sync();
+            });
+            chapters.forEach(function (d) { d.addEventListener('toggle', sync); });
+            sync();
+
+            // Video giới thiệu
+            var dialog = document.querySelector('[data-trailer]');
+            var openBtn = document.querySelector('[data-trailer-open]');
+            if (dialog && openBtn) {
+                var frame = dialog.querySelector('iframe'), video = dialog.querySelector('video');
+                openBtn.addEventListener('click', function () {
+                    if (frame) frame.src = frame.dataset.src;
+                    dialog.showModal();
+                    if (video) video.play();
+                });
+                function close() { if (frame) frame.src = ''; if (video) video.pause(); dialog.close(); }
+                dialog.querySelector('[data-trailer-close]').addEventListener('click', close);
+                dialog.addEventListener('click', function (e) { if (e.target === dialog) close(); });
+                dialog.addEventListener('cancel', function () { if (frame) frame.src = ''; if (video) video.pause(); });
+            }
+
+            // Sao chép liên kết
+            var share = document.querySelector('[data-copy-link]');
+            if (share) share.addEventListener('click', function () {
+                navigator.clipboard.writeText(location.href).then(function () {
+                    share.classList.add('is-copied');
+                    share.title = 'Đã sao chép!';
+                    setTimeout(function () { share.classList.remove('is-copied'); share.title = 'Sao chép liên kết khóa học'; }, 1600);
+                });
+            });
+        })();
+    </script>
+}

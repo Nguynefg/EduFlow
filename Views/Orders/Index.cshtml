@@ -1,0 +1,34 @@
+@model List<Order>
+@{ViewData["Title"]="Lịch sử đơn hàng";}
+<div class="page-heading">
+<h1>Lịch sử đơn hàng</h1>
+<a class="button secondary" asp-controller="Cart" asp-action="Index">Giỏ hàng</a>
+</div>
+<section class="panel">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Đơn hàng</th>
+<th>Ngày tạo</th>
+<th>Khóa học</th>
+<th>Tổng tiền</th>
+<th>Trạng thái</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+@foreach(var o in Model){<tr>
+<td>#@o.Id</td>
+<td>@o.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+<td>@o.Items.Count</td>
+<td>@UiText.Price(o.TotalPrice)</td>
+<td>@UiText.OrderStatus(o.Status) @(o.Status==OrderStatus.Pending && o.CreatedAt.AddMinutes(30)<DateTime.Now?"· Đã hết hạn tạo thanh toán":"")</td>
+<td>
+<a asp-action="Details" asp-route-id="@o.Id">Xem chi tiết</a>
+</td>
+</tr>}
+</tbody>
+</table>
+</div>@if(Model.Count==0){<p class="muted">Bạn chưa có đơn hàng nào.</p>}</section>

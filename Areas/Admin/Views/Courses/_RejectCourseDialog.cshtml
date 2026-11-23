@@ -1,0 +1,32 @@
+@* Hộp thoại nhập lý do: từ chối khóa học và tạm ẩn khóa học (dùng chung ở danh sách và trang chi tiết) *@
+<dialog id="rejectCourseDialog" class="reason-dialog">
+    <form asp-controller="Courses" asp-action="Reject" method="post">
+        <div class="reason-dialog-head">
+            <span class="reason-dialog-icon danger"><i data-lucide="circle-x"></i></span>
+            <h2>Từ chối khóa học</h2>
+        </div>
+        <p class="muted text-sm mt-3"><b data-name></b> sẽ trở về trạng thái "Bị từ chối". Giảng viên thấy lý do và sửa lại để gửi duyệt.</p>
+        <input type="hidden" name="id" data-target />
+        <textarea name="reason" rows="4" maxlength="500" required placeholder="Ví dụ: Video giới thiệu chưa rõ, chương 2 còn thiếu bài học."></textarea>
+        <div class="dialog-actions">
+            <button type="button" class="button secondary" data-dialog-close>Hủy</button>
+            <button class="button danger"><i data-lucide="circle-x" class="w-4 h-4"></i>Xác nhận từ chối</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="hideCourseDialog" class="reason-dialog">
+    <form asp-controller="Courses" asp-action="Hide" method="post">
+        <div class="reason-dialog-head">
+            <span class="reason-dialog-icon warn"><i data-lucide="eye-off"></i></span>
+            <h2>Tạm ẩn khóa học</h2>
+        </div>
+        <p class="muted text-sm mt-3"><b data-name></b> sẽ không còn hiện với học viên cho đến khi hiện lại.</p>
+        <input type="hidden" name="id" data-target />
+        <textarea name="reason" rows="3" maxlength="500" placeholder="Lý do ẩn (không bắt buộc)"></textarea>
+        <div class="dialog-actions">
+            <button type="button" class="button secondary" data-dialog-close>Hủy</button>
+            <button class="button"><i data-lucide="eye-off" class="w-4 h-4"></i>Tạm ẩn</button>
+        </div>
+    </form>
+</dialog>

@@ -1,0 +1,206 @@
+﻿@model HomePageViewModel
+@{
+    ViewData["Title"] = "Học trực tuyến";
+    ViewData["FullWidth"] = true;
+    ViewData["Announcement"] = true;
+    var loggedIn = User.Identity?.IsAuthenticated == true;
+
+    // Màu nền icon lặp lại theo thứ tự
+    var colors = new[] { "bg-blue-50 text-blue-600", "bg-amber-50 text-amber-600", "bg-emerald-50 text-emerald-600", "bg-sky-50 text-sky-600",
+                         "bg-rose-50 text-rose-600", "bg-teal-50 text-teal-600", "bg-orange-50 text-orange-600", "bg-cyan-50 text-cyan-700" };
+}
+
+<div class="home-page">
+<!-- ================= 1. HERO ================= -->
+<section class="home-hero relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 grid lg:grid-cols-2 gap-10 items-center">
+        <!-- Bên trái: tiêu đề + nút -->
+        <div>
+            <p class="home-intro">Học trực tuyến cùng EduFlow</p>
+            <h1 class="mt-6 text-4xl sm:text-5xl lg:text-[56px] font-black leading-[1.15] tracking-tight text-slate-900">
+                Học mọi lĩnh vực,
+                <span class="home-accent">bắt đầu</span><br />
+                ngay hôm nay!
+            </h1>
+            <p class="mt-6 text-slate-600 text-base leading-relaxed max-w-xl">
+                Lập trình, ngoại ngữ, thiết kế, kinh doanh, marketing, tin học văn phòng…
+                Học theo lộ trình từng chương, có bài kiểm tra sau mỗi phần, cùng giảng viên đã được xác minh.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="@(loggedIn ? "/Courses" : "/Account/Register")" class="btn-primary">
+                    @(loggedIn ? "Bắt đầu học" : "Đăng ký miễn phí") <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+                <a href="/Courses" class="btn-outline"><i data-lucide="layout-grid" class="w-4 h-4"></i> Xem tất cả khóa học</a>
+            </div>
+
+            <!-- Các lĩnh vực học -->
+            <p class="mt-12 text-sm font-semibold text-slate-600">Học nhiều lĩnh vực khác nhau</p>
+            <div class="mt-4 flex flex-wrap gap-2.5">
+                @foreach (var field in new[] {
+                    ("code-xml", "Lập trình"), ("languages", "Ngoại ngữ"), ("palette", "Thiết kế"),
+                    ("briefcase", "Kinh doanh"), ("megaphone", "Marketing"), ("sheet", "Tin học văn phòng"),
+                    ("camera", "Nhiếp ảnh"), ("music", "Âm nhạc") })
+                {
+                    <a href="/Courses?q=@Uri.EscapeDataString(field.Item2)" class="field-chip"><i data-lucide="@field.Item1"></i>@field.Item2</a>
+                }
+            </div>
+        </div>
+
+        <!-- Bên phải: ảnh minh họa + số liệu thật -->
+        <div class="relative hidden lg:block">
+            <img src="~/images/illustration-hero.svg" alt="Học trực tuyến trên EduFlow" class="w-full" />
+            <div class="home-hero-stats" aria-label="Số liệu khóa học">
+                <div class="hero-stat"><strong>@Model.TotalCourses</strong><span>khóa học</span></div>
+                <div class="hero-stat"><strong>@Model.TotalLessons</strong><span>bài học</span></div>
+                <div class="hero-stat"><strong>@Model.TotalInstructors</strong><span>giảng viên</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================= 2. DANH MỤC NỔI BẬT ================= -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <h2 class="text-3xl sm:text-4xl font-black text-slate-900">Danh mục nổi bật</h2>
+    @if (Model.TopCategories.Count == 0)
+    {
+        <p class="mt-6 text-slate-500">Chưa có danh mục nào.</p>
+    }
+    <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        @for (var i = 0; i < Model.TopCategories.Count; i++)
+        {
+            var item = Model.TopCategories[i];
+            <a href="/Courses?categoryId=@item.Category.Id" class="home-category-card group">
+                <span class="w-14 h-14 rounded-xl flex items-center justify-center @colors[i % colors.Length] group-hover:scale-110 transition">
+                    <i data-lucide="@CourseVisual.Icon(item.Category.Name)" class="w-7 h-7"></i>
+                </span>
+                <strong class="mt-5 text-lg font-extrabold text-slate-900">@item.Category.Name</strong>
+                <span class="mt-2 text-sm text-slate-500">
+                    <span class="text-amber-500">•</span> @item.CourseCount khóa học
+                    <span class="text-amber-500 ml-2">•</span> @item.LessonCount bài học
+                </span>
+            </a>
+        }
+    </div>
+</section>
+
+<!-- ================= 3. KHÁM PHÁ CHỦ ĐỀ (TAB) ================= -->
+@if (Model.SubjectTabs.Count > 0)
+{
+    <section class="home-soft-bg py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-black text-slate-900 text-center">Khám phá các chủ đề hàng đầu</h2>
+            <div class="mt-8 flex flex-wrap justify-center gap-2 border-b border-slate-200" role="tablist">
+                @for (var i = 0; i < Model.SubjectTabs.Count; i++)
+                {
+                    <button type="button" class="home-tab @(i == 0 ? "is-active" : "")" data-tab="tab-@i">@Model.SubjectTabs[i].Category.Name</button>
+                }
+            </div>
+
+            @for (var i = 0; i < Model.SubjectTabs.Count; i++)
+            {
+                var tab = Model.SubjectTabs[i];
+                <div class="home-tab-panel mt-10 grid lg:grid-cols-5 gap-8 items-start" id="tab-@i" hidden="@(i != 0)">
+                    <div class="lg:col-span-2">
+                        <h3 class="text-2xl font-black text-slate-900">@tab.Category.Name</h3>
+                        <p class="mt-4 text-slate-600 leading-relaxed">
+                            @tab.CourseCount khóa học với @tab.LessonCount bài học về @tab.Category.Name, từ cơ bản đến nâng cao.
+                            Mỗi khóa học được quản trị viên kiểm duyệt trước khi xuất bản.
+                        </p>
+                        <a href="/Courses?categoryId=@tab.Category.Id" class="btn-primary mt-6">Khám phá khóa học <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                    </div>
+                    <div class="lg:col-span-3 catalog-grid grid sm:grid-cols-2 gap-6">
+                        @foreach (var course in tab.Courses)
+                        {
+                            <partial name="_CourseCard" model="course" />
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+<!-- ================= 4 + 5. HAI HÀNG KHÓA HỌC CUỘN NGANG ================= -->
+@foreach (var row in new[] { ("recommended", "Khóa học mới dành cho bạn", Model.RecommendedCourses), ("popular", "Khóa học phổ biến nhất", Model.PopularCourses) })
+{
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+        <div class="flex items-end justify-between gap-4">
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900">@row.Item2</h2>
+            <div class="flex items-center gap-3">
+                <a href="/Courses" class="text-sm font-bold text-blue-600 hidden sm:inline">Xem tất cả →</a>
+                <button type="button" class="home-scroll-btn" data-scroll="@row.Item1" data-dir="-1" aria-label="Trước"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                <button type="button" class="home-scroll-btn" data-scroll="@row.Item1" data-dir="1" aria-label="Sau"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+        @if (row.Item3.Count == 0)
+        {
+            <p class="mt-6 text-slate-500">Chưa có khóa học nào được xuất bản.</p>
+        }
+        <div class="home-scroll-row mt-8" id="row-@row.Item1">
+            @foreach (var course in row.Item3)
+            {
+                <partial name="_CourseCard" model="course" />
+            }
+        </div>
+    </section>
+}
+
+<!-- ================= 6. VÌ SAO CHỌN EDUFLOW ================= -->
+<section class="home-soft-bg py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-black text-slate-900 text-center">Vì sao học viên chọn EduFlow</h2>
+        <p class="mt-3 text-slate-600 text-center">Học có lộ trình, có kiểm tra, có giảng viên được xác minh.</p>
+        <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach (var f in new[] {
+                ("list-tree", "Lộ trình rõ ràng", "Khóa học chia theo chương và bài, học xong bài trước mới mở bài sau."),
+                ("list-checks", "Kiểm tra sau mỗi phần", "Bài quiz trắc nghiệm và điền khuyết giúp bạn chắc kiến thức."),
+                ("badge-check", "Giảng viên xác minh", "Mọi giảng viên đều gửi hồ sơ định danh và được quản trị viên duyệt."),
+                ("shield-check", "Nội dung được kiểm duyệt", "Khóa học chỉ xuất bản sau khi quản trị viên xem xét nội dung.") })
+            {
+                <div class="rounded-2xl bg-white border border-slate-100 p-6 text-center shadow-sm">
+                    <span class="mx-auto w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><i data-lucide="@f.Item1" class="w-6 h-6"></i></span>
+                    <h3 class="mt-4 font-extrabold text-slate-900">@f.Item2</h3>
+                    <p class="mt-2 text-sm text-slate-500">@f.Item3</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ================= 7. BANNER CUỐI TRANG ================= -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="rounded-3xl bg-navy-900 text-white overflow-hidden grid lg:grid-cols-2 items-center">
+        <div class="p-10 sm:p-14">
+            <h2 class="text-3xl sm:text-4xl font-black leading-tight">Chia sẻ kiến thức,<br /><span class="text-amber-300">trở thành giảng viên</span> EduFlow</h2>
+            <p class="mt-5 text-slate-300">Gửi hồ sơ định danh, được duyệt là bạn có thể tạo khóa học, đăng bài giảng và nhận doanh thu.</p>
+            <a href="/Home/Teach" class="btn-amber mt-8">Đăng ký giảng dạy <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+        </div>
+        <div class="hidden lg:flex h-full min-h-[300px] bg-gradient-to-br from-blue-500 to-blue-800 items-center justify-center p-8">
+            <img src="~/images/illustration-teach.svg" alt="" class="w-full max-w-sm" />
+        </div>
+    </div>
+</section>
+
+</div>
+
+@section Scripts {
+    <script>
+        // Chuyển tab chủ đề
+        document.querySelectorAll('.home-tab').forEach(function (button) {
+            button.addEventListener('click', function () {
+                document.querySelectorAll('.home-tab').forEach(b => b.classList.remove('is-active'));
+                document.querySelectorAll('.home-tab-panel').forEach(p => p.hidden = true);
+                button.classList.add('is-active');
+                document.getElementById(button.dataset.tab).hidden = false;
+            });
+        });
+
+        // Nút mũi tên cuộn hàng khóa học
+        document.querySelectorAll('.home-scroll-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var row = document.getElementById('row-' + button.dataset.scroll);
+                row.scrollBy({ left: button.dataset.dir * 320, behavior: 'smooth' });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,105 @@
+@model CartViewModel
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">ĐĂNG KÝ KHÓA HỌC</span>
+        <h1>Giỏ hàng</h1>
+        <p class="muted">Chọn các khóa muốn thanh toán. Các khóa còn lại vẫn được giữ trong giỏ.</p>
+    </div>
+    <a asp-controller="Orders" asp-action="Index" class="button secondary">Lịch sử đơn hàng</a>
+</div>
+
+@if (Model.PendingOrders.Count > 0)
+{
+    <section class="notice" role="status">
+        <h2>Lựa chọn đang có đơn chờ thanh toán</h2>
+        <p>Mở đơn cũ để tiếp tục, hoặc bỏ chọn khóa trong đơn đó để thanh toán các khóa khác.</p>
+        @foreach (var order in Model.PendingOrders)
+        {
+            <div class="checkout-item">
+                <a class="button" asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id">Tiếp tục đơn #@order.Id</a>
+                @if (order.Payments.Count == 0)
+                {
+                    <form asp-controller="Orders" asp-action="Cancel" method="post" data-confirm="Hủy đơn cũ để tạo đơn mới cho lựa chọn hiện tại?">
+                        <input type="hidden" name="id" value="@order.Id" />
+                        <input type="hidden" name="returnToCart" value="true" />
+                        <button class="button secondary">Hủy đơn #@order.Id để chọn lại</button>
+                    </form>
+                }
+            </div>
+        }
+    </section>
+}
+
+@if (Model.Items.Count == 0)
+{
+    <section class="panel empty">
+        <h2>Giỏ hàng đang trống</h2>
+        <a class="button" asp-controller="Courses" asp-action="Index">Khám phá khóa học</a>
+    </section>
+}
+else
+{
+    <form id="cartForm" class="checkout-grid" asp-controller="Cart" asp-action="Checkout" method="post">
+        <section class="panel">
+            <div class="cart-selection-head">
+                <label class="cart-pick">
+                    <input type="checkbox" data-select-all checked="@(Model.SelectedIds.Count == Model.Items.Count)" />
+                    <span>Chọn tất cả</span>
+                </label>
+                <span class="muted">Đã chọn @Model.SelectedIds.Count / @Model.Items.Count khóa</span>
+            </div>
+            @foreach (var item in Model.Items)
+            {
+                var course = item.Course!;
+                <article class="checkout-item">
+                    <div class="cart-course">
+                        <label class="cart-pick" for="pick-@course.Id">
+                            <input id="pick-@course.Id" type="checkbox" name="selectedIds" value="@course.Id"
+                                   checked="@Model.SelectedIds.Contains(course.Id)" data-course-pick aria-label="Chọn @course.Title" />
+                        </label>
+                        <div>
+                            <h3><a asp-controller="Courses" asp-action="Details" asp-route-id="@course.Id">@course.Title</a></h3>
+                            <p class="muted">@course.Instructor?.FullName · @UiText.Price(course.CurrentPrice)</p>
+                        </div>
+                    </div>
+                    <button class="button secondary small" type="submit" form="remove-@course.Id">Xóa khỏi giỏ</button>
+                </article>
+            }
+            <button id="reviewSelection" class="button secondary small" type="submit" formaction="@Url.Action("Review")">Cập nhật lựa chọn</button>
+        </section>
+        <aside class="panel">
+            <h2>Thanh toán các khóa đã chọn</h2>
+            <label for="coupon">Mã giảm giá</label>
+            <input id="coupon" name="coupon" value="@Model.CouponCode" maxlength="50" />
+            <div class="mt-3"><button class="button secondary" type="submit" formaction="@Url.Action("Review")">Áp dụng</button></div>
+            @if (Model.Error != null)
+            {
+                <p class="validation" role="alert">@Model.Error</p>
+            }
+            <dl class="checkout-totals">
+                <dt>Tạm tính</dt><dd>@UiText.Price(Model.Subtotal)</dd>
+                <dt>Giảm giá</dt><dd>@(Model.Discount > 0 ? "−" : "")@(Model.Discount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))) ₫</dd>
+                <dt>Tổng cộng</dt><dd><strong>@UiText.Price(Model.Total)</strong></dd>
+            </dl>
+            <p class="hint">Tổng tiền và coupon chỉ áp dụng cho các khóa đã chọn. Giá được kiểm tra lại khi tạo đơn.</p>
+            <button class="button" type="submit" disabled="@(Model.Error != null || Model.PendingOrders.Count > 0 || Model.SelectedIds.Count == 0)">
+                @(Model.SelectedIds.Count == 0 ? "Chọn khóa học để thanh toán" : Model.PendingOrders.Count > 0 ? "Xử lý đơn chờ ở trên" : Model.Total == 0 ? "Đăng ký miễn phí" : "Thanh toán các khóa đã chọn")
+            </button>
+        </aside>
+    </form>
+    @* Các form xóa đặt bên ngoài form thanh toán để không bị lồng form. *@
+    @foreach (var item in Model.Items)
+    {
+        <form id="remove-@item.CourseId" asp-controller="Cart" asp-action="Remove" method="post">
+            <input type="hidden" name="id" value="@item.CourseId" />
+        </form>
+    }
+}
+
+@section Scripts {
+    <script src="~/js/cart-selection.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,39 @@
+@{
+    // Studio giảng viên dùng chung layout này nhưng đổi nhãn và CSS
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var studio = controller is "Instructor" or "Curriculum" or "Media";
+}
+<!doctype html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <partial name="_DesignHead" />
+    <link rel="stylesheet" href="~/css/layouts/@(studio ? "instructor" : "student").css" asp-append-version="true" />
+    @if (studio)
+    {
+        <link rel="stylesheet" href="~/css/studio.css" asp-append-version="true" />
+        <link rel="stylesheet" href="~/css/quiz-builder.css" asp-append-version="true" />
+    }
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="font-sans bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+    <partial name="_DesignHeader" />
+
+    <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-3 py-3">
+            <span class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700 font-mono text-[11px] font-bold uppercase tracking-wider">@(studio ? "Studio giảng viên" : "Tài khoản của tôi")</span>
+            <partial name="_AccountNav" />
+        </div>
+    </div>
+
+    <main id="main" class="mvc-content @(studio ? "studio" : "") max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+        <partial name="_Feedback" />
+        @RenderBody()
+    </main>
+
+    <partial name="_DesignFooter" />
+    <script src="~/js/design.js" asp-append-version="true"></script>
+    <script src="~/js/ui-actions.js" asp-append-version="true"></script>
+    <script src="~/js/tooltip.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

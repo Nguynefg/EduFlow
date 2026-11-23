@@ -1,0 +1,50 @@
+@{
+    // Nút góc phải: trang đăng nhập thì mời đăng ký, các trang khác thì mời đăng nhập
+    var isLogin = ViewContext.RouteData.Values["action"]?.ToString() == "Login";
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <partial name="_DesignHead" />
+    <link rel="stylesheet" href="~/css/auth.css" asp-append-version="true" />
+</head>
+<body class="auth-page font-sans antialiased">
+    <div class="auth-shell">
+        <!-- BÊN TRÁI: khung màu + khẩu hiệu -->
+        <aside class="auth-visual">
+            <div class="auth-visual-content">
+                <a href="/" class="auth-logo">
+                    <span class="auth-logo-icon"><i data-lucide="graduation-cap" class="w-5 h-5"></i></span>
+                    <span>Edu<span class="text-blue-600">Flow</span></span>
+                </a>
+                <h1>Học tập, Phát triển,<br />và Thành công</h1>
+                <p>Xây dựng kỹ năng, đạt mục tiêu và tiến thêm một bước trên con đường sự nghiệp của bạn.</p>
+            </div>
+        </aside>
+
+        <!-- BÊN PHẢI: form -->
+        <main class="auth-main">
+            <div class="auth-topbar">
+                <a href="/" class="auth-back"><i data-lucide="arrow-left" class="w-4 h-4"></i> Về trang chủ</a>
+                @if (isLogin)
+                {
+                    <span>Chưa có tài khoản? <a asp-controller="Account" asp-action="Register" class="auth-switch">Đăng ký</a></span>
+                }
+                else
+                {
+                    <span>Đã có tài khoản? <a asp-controller="Account" asp-action="Login" class="auth-switch">Đăng nhập</a></span>
+                }
+            </div>
+
+            <div class="auth-body">
+                <partial name="_Feedback" />
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <script src="~/js/design.js" asp-append-version="true"></script>
+    <script src="~/js/ui-actions.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

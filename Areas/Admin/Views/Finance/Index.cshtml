@@ -1,0 +1,51 @@
+﻿@model List<PayoutRequest>
+@{ViewData["Title"]="Duyệt rút tiền"; bool simulation = ViewBag.SimulationEnabled == true;}
+@section Styles { <link rel="stylesheet" href="~/css/tax.css" asp-append-version="true" /> }
+<div class="page-heading">
+<h1>Duyệt rút tiền</h1>
+<a class="button secondary" asp-action="TaxReport">Sổ thuế TNCN</a>
+<a class="button" asp-action="Revenue">Doanh thu nền tảng</a>
+<a class="button secondary" asp-action="Orders">Đơn hàng</a>
+</div>
+@if(simulation){<div class="notice">Chế độ mô phỏng: duyệt, chi trả và tính thuế trong sổ mô phỏng. Không thực hiện chuyển tiền thật.</div>}
+<form method="get" class="panel">
+<label for="status">Lọc trạng thái</label>
+<select id="status" name="status">
+<option value="">Tất cả</option>@foreach(var s in new[]{"pending","approved","rejected","paid"}){<option value="@s" selected="@(ViewBag.Status==s)">@UiText.PayoutStatus(s)</option>}</select>
+<button class="button secondary">Lọc</button>
+</form>
+@foreach(var r in Model){var p=r.Instructor?.InstructorProfile;<section class="panel mt-6">
+<h2>Yêu cầu #@r.Id · @UiText.Money(r.Amount)</h2>
+<p>@r.Instructor?.FullName · @UiText.PayoutStatus(r.Status) · @r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+<p>@(r.BankNameSnapshot??p?.BankName) · @(r.BankNumberSnapshot??p?.BankAccountNumber) · @(r.BankOwnerSnapshot??p?.BankAccountName)</p>
+<p>@r.AdminNote</p>
+<div class="tax-summary"><p>Thù lao trước thuế: <strong>@UiText.Money(r.Amount)</strong></p>
+<p>Thuế TNCN @(r.Status == "pending" ? "dự kiến" : ""): <strong>@(r.TaxAmount.HasValue ? UiText.Money(r.TaxAmount.Value) : "Chưa xác định")</strong></p>
+<p>Chuyển khoản thực nhận: <strong>@(r.NetAmount.HasValue ? UiText.Money(r.NetAmount.Value) : "Chưa xác định")</strong></p></div>
+<p>Người nhận: @r.PayeeNameSnapshot · MST/định danh: @r.TaxIdSnapshot · Quy tắc: @r.TaxRule</p>
+<p class="muted">@(r.TaxVoluntary ? "Có yêu cầu khấu trừ tự nguyện dưới ngưỡng." : "Không yêu cầu khấu trừ tự nguyện dưới ngưỡng.")</p>
+@if(r.IsTest){<p class="notice">Yêu cầu chi trả mô phỏng, không chuyển tiền thật.</p>}
+@if(r.IsTest == simulation && r.Status is ("pending" or "approved")){
+<form asp-action="Process" method="post" enctype="multipart/form-data">
+<input type="hidden" name="id" value="@r.Id"/>
+@if(r.Status=="pending"){
+<div class="tax-options"><label><input type="checkbox" name="taxConfirmed" value="true" /> Tôi đã kiểm tra cá nhân cư trú, hợp đồng thuộc diện không HĐLĐ/dưới 3 tháng, MST/định danh và khoản thù lao trước thuế; không thuộc trường hợp cần xử lý thuế khác.</label></div>
+}
+<label for="note-@r.Id">Ghi chú / lý do từ chối</label>
+<textarea id="note-@r.Id" name="note" maxlength="500">
+</textarea>
+@if(r.Status=="approved"){
+<label for="paidOn-@r.Id">@(simulation ? "Ngày chi trả mô phỏng" : "Ngày chuyển khoản thực tế")</label><input id="paidOn-@r.Id" name="paidOn" type="date" value="@(simulation ? DateTime.Today.ToString("yyyy-MM-dd") : "")" min="@r.TaxReviewedAt?.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+@if(!simulation){
+<label for="receipt-@r.Id">Biên lai chuyển khoản (JPG, PNG, WebP, tối đa 5 MB)</label>
+<input id="receipt-@r.Id" name="receipt" type="file" accept=".jpg,.jpeg,.png,.webp"/>
+}else{<p class="hint">Hệ thống tạo biên nhận mô phỏng sau khi xác nhận. Không cần tải biên lai ngân hàng thật.</p>}
+<button class="button" name="action" value="paid">@(simulation ? "Xác nhận đã chi trả mô phỏng" : "Đã chuyển đúng tiền thực nhận — lưu biên lai")</button>}else{<button class="button" name="action" value="approved">Duyệt yêu cầu</button>}
+<button class="button danger" name="action" value="rejected" formnovalidate>Từ chối và trả số dư</button>
+</form>}
+@if(r.ReceiptUrl!=null || (r.IsTest && r.Status=="paid")){<a asp-area="" asp-controller="Finance" asp-action="Receipt" asp-route-id="@r.Id">Tải biên lai</a>}</section>}
+@if(Model.Count==0){<section class="panel">
+<p>Chưa có yêu cầu phù hợp.</p>
+</section>}
+
+

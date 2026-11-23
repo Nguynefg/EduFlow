@@ -1,0 +1,33 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Đăng nhập"; }
+
+<h2 class="auth-title">Đăng nhập tài khoản</h2>
+<p class="auth-subtitle">Truy cập trang cá nhân và tiếp tục hành trình học tập của bạn.</p>
+
+<partial name="_GoogleButton" />
+
+<form asp-action="Login" method="post" class="auth-form">
+    <div asp-validation-summary="ModelOnly" class="validation"></div>
+    <input asp-for="ReturnUrl" type="hidden" />
+
+    <label asp-for="Email" class="sr-only"></label>
+    <input asp-for="Email" class="auth-input" placeholder="Email" autocomplete="username" />
+    <span asp-validation-for="Email" class="validation"></span>
+
+    <label asp-for="Password" class="sr-only"></label>
+    <div class="auth-password-field">
+        <input asp-for="Password" class="auth-input" placeholder="Mật khẩu" autocomplete="current-password" />
+        <partial name="_PasswordToggle" model='("Password", "mật khẩu")' />
+    </div>
+    <span asp-validation-for="Password" class="validation"></span>
+
+    <label class="auth-check"><input asp-for="RememberMe" /> Ghi nhớ đăng nhập</label>
+
+    <button class="auth-button">Đăng nhập</button>
+    <a asp-controller="Password" asp-action="Forgot" class="auth-link">Quên mật khẩu?</a>
+</form>
+
+@if (ViewBag.NeedSetup == true)
+{
+    <div class="notice mt-6">Hệ thống chưa có quản trị viên. <a asp-action="Setup" class="font-bold underline">Tạo tài khoản quản trị đầu tiên →</a></div>
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <partial name="_DesignHead" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="font-sans bg-white text-slate-900 antialiased min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+    <partial name="_DesignHeader" />
+
+    @if (ViewData["FullWidth"] is true)
+    {
+        <main id="main" class="flex-1">
+            <div class="max-w-7xl mx-auto px-4"><partial name="_Feedback" /></div>
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        <main id="main" class="mvc-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-1">
+            <partial name="_Feedback" />
+            @RenderBody()
+        </main>
+    }
+
+    <partial name="_DesignFooter" />
+    <partial name="_AuthModal" />
+    <script src="~/js/design.js" asp-append-version="true"></script>
+    <script src="~/js/ui-actions.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

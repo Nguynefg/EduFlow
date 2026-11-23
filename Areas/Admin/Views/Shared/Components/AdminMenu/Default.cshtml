@@ -1,0 +1,18 @@
+@model AdminMenuViewModel
+<nav class="admin-navigation" aria-label="Quản trị">
+    <p class="admin-nav-caption">Chức năng quản lý</p>
+    @foreach (var item in Model.Items)
+    {
+        var active = Model.Controller == item.Controller && !Model.Deleted;
+        <a asp-area="Admin" asp-controller="@item.Controller" asp-action="Index" class="admin-nav-link @(active ? "is-active" : "")">
+            <i data-lucide="@item.Icon"></i>@item.Label
+            @if (item.Badge > 0)
+            {
+                <span class="admin-count-badge">@item.Badge</span>
+            }
+        </a>
+    }
+    <a asp-area="Admin" asp-controller="Users" asp-action="Index" asp-route-deleted="true" class="admin-nav-link @(Model.Deleted ? "is-active" : "")">
+        <i data-lucide="archive-restore"></i>Tài khoản đã xóa
+    </a>
+</nav>

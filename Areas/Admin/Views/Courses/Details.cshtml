@@ -1,0 +1,225 @@
+﻿@model Course
+@{
+    ViewData["Title"] = "Chi tiết khóa học";
+    var lessons = Model.Sections.SelectMany(s => s.Lessons).ToList();
+    var totalSec = lessons.Sum(l => l.DurationSec);
+    var trailer = VideoHelper.YouTubeEmbed(Model.TrailerUrl);
+    string[] Lines(string? text) => (text ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    string LessonIcon(string type) => type == LessonType.Video ? "play-circle" : type == LessonType.Quiz ? "list-checks" : "file-text";
+}
+
+<a asp-action="Index" asp-route-status="@Model.Status" class="admin-table-link inline-flex items-center gap-1"><i data-lucide="arrow-left" class="w-4 h-4"></i> Danh sách khóa học</a>
+
+<div class="space-y-6 mt-5">
+    <!-- ================= THẺ ĐẦU TRANG ================= -->
+    <section class="panel review-card course-review-head">
+        <div class="course-review-cover">
+            <partial name="~/Views/Shared/_CourseCover.cshtml" model="Model" />
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="badge @UiText.CourseStatusCss(Model.Status)">@UiText.CourseStatus(Model.Status)</span>
+                <span class="review-chip"><i data-lucide="folder" class="w-3.5 h-3.5"></i>@Model.Category?.Name</span>
+                <span class="review-chip"><i data-lucide="signal" class="w-3.5 h-3.5"></i>@UiText.Level(Model.Level)</span>
+            </div>
+            <h1 class="mt-3 text-2xl sm:text-3xl font-black !leading-snug">@Model.Title</h1>
+            @if (!string.IsNullOrEmpty(Model.ShortDesc))
+            {
+                <p class="mt-2 muted">@Model.ShortDesc</p>
+            }
+            <p class="mt-3 text-sm flex items-center gap-2">
+                <i data-lucide="user-round" class="w-4 h-4 text-blue-600"></i>
+                <b>@Model.Instructor?.FullName</b><span class="muted">· @Model.Instructor?.Email</span>
+            </p>
+
+            <!-- Thanh thao tác -->
+            <div class="review-actions">
+                @if (Model.Status is CourseStatus.Draft or CourseStatus.Rejected)
+                {
+                    <form asp-area="Admin" asp-controller="Instructor" asp-action="Submit" method="post" data-confirm="Gửi khóa học này để xét duyệt?">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button type="submit" class="action-btn approve"><i data-lucide="send" aria-hidden="true"></i>Gửi duyệt</button>
+                    </form>
+                }
+                <a asp-area="Admin" asp-controller="Instructor" asp-action="Edit" asp-route-id="@Model.Id" class="action-btn view"><i data-lucide="pencil"></i> Sửa thông tin</a>
+                <a asp-area="Admin" asp-controller="Curriculum" asp-action="Index" asp-route-id="@Model.Id" class="action-btn view"><i data-lucide="list-tree"></i> Quản lý nội dung</a>
+                @if (Model.Status == CourseStatus.Pending)
+                {
+                    <form asp-action="Approve" method="post" data-confirm="Duyệt và xuất bản khóa học này?">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button class="action-btn approve"><i data-lucide="badge-check"></i> Duyệt và xuất bản</button>
+                    </form>
+                    <button type="button" class="action-btn danger" data-reason="rejectCourseDialog" data-value="@Model.Id" data-name="@Model.Title"><i data-lucide="circle-x"></i> Từ chối</button>
+                }
+                @if (Model.Status == CourseStatus.Published)
+                {
+                    <a asp-area="" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Id" target="_blank" class="action-btn view"><i data-lucide="square-arrow-out-up-right"></i> Trang công khai</a>
+                    <button type="button" class="action-btn warn" data-reason="hideCourseDialog" data-value="@Model.Id" data-name="@Model.Title"><i data-lucide="eye-off"></i> Tạm ẩn</button>
+                }
+                @if (Model.Status == CourseStatus.Hidden)
+                {
+                    <form asp-action="Unhide" method="post">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <button class="action-btn approve"><i data-lucide="eye"></i> Hiện lại</button>
+                    </form>
+                }
+                <form asp-action="Delete" method="post" data-confirm="Xóa khóa học vi phạm này? Khóa học sẽ biến mất khỏi hệ thống." class="ml-auto">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button class="action-btn danger-outline"><i data-lucide="trash-2"></i> Xóa khóa học</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrEmpty(Model.RejectReason))
+    {
+        <div class="review-alert"><i data-lucide="message-square-warning" class="w-5 h-5 shrink-0"></i><div><b>Lý do @(Model.Status == CourseStatus.Hidden ? "tạm ẩn" : "từ chối"):</b> @Model.RejectReason</div></div>
+    }
+
+    <div class="grid lg:grid-cols-3 gap-6 items-start">
+        <!-- ================= CỘT TRÁI ================= -->
+        <div class="lg:col-span-2 space-y-6">
+            <section class="panel review-card">
+                <h2 class="review-title"><i data-lucide="align-left"></i> Mô tả khóa học</h2>
+                @if (string.IsNullOrEmpty(Model.Description)) { <p class="muted">Chưa có mô tả.</p> } else { <div class="rich-content">@RichText.Render(Model.Description)</div> }
+            </section>
+
+            <section class="panel review-card">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h2 class="review-title"><i data-lucide="target"></i> Bạn sẽ học được gì</h2>
+                        <ul class="space-y-2">
+                            @foreach (var line in Lines(Model.Objectives))
+                            {
+                                <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 mt-1 shrink-0 text-emerald-600"></i>@line</li>
+                            }
+                        </ul>
+                    </div>
+                    <div>
+                        <h2 class="review-title"><i data-lucide="clipboard-list"></i> Yêu cầu đầu vào</h2>
+                        <ul class="space-y-2">
+                            @foreach (var line in Lines(Model.Requirements))
+                            {
+                                <li class="flex gap-2"><i data-lucide="dot" class="w-4 h-4 mt-1 shrink-0 text-blue-600"></i>@line</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mục lục: bấm vào từng bài để xem nội dung -->
+            <section class="panel review-card">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="review-title !mb-0"><i data-lucide="layers"></i> Nội dung khóa học</h2>
+                    <span class="muted text-sm">@Model.Sections.Count chương · @lessons.Count bài · @UiText.Duration(totalSec)</span>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @foreach (var chapter in Model.Sections)
+                    {
+                        <details class="review-chapter" open>
+                            <summary>
+                                <span class="flex items-center gap-2"><i data-lucide="chevron-right" class="review-caret w-4 h-4"></i>@chapter.Title</span>
+                                <span class="muted text-xs font-normal">@chapter.Lessons.Count bài</span>
+                            </summary>
+                            @foreach (var lesson in chapter.Lessons)
+                            {
+                                <details class="review-lesson">
+                                    <summary>
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <i data-lucide="@LessonIcon(lesson.LessonType)" class="w-4 h-4 shrink-0 text-blue-600"></i>
+                                            <span class="truncate">@lesson.Title</span>
+                                        </span>
+                                        <span class="flex items-center gap-2 shrink-0">
+                                            @if (lesson.IsFreePreview) { <span class="review-chip !text-emerald-700 !bg-emerald-50">Học thử</span> }
+                                            <span class="review-chip">@UiText.LessonType(lesson.LessonType)</span>
+                                            @if (lesson.DurationSec > 0) { <span class="muted text-xs w-12 text-right">@UiText.Duration(lesson.DurationSec)</span> }
+                                        </span>
+                                    </summary>
+                                    <div class="review-lesson-body">
+                                        @if (lesson.LessonType == LessonType.Video)
+                                        {
+                                            <p class="flex items-center gap-2"><i data-lucide="link" class="w-4 h-4"></i><a href="@lesson.VideoUrl" target="_blank" class="truncate">@lesson.VideoUrl</a></p>
+                                        }
+                                        else if (lesson.LessonType == LessonType.Article)
+                                        {
+                                            <div class="lesson-article rich-content">@RichText.Render(lesson.Content)</div>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-sm"><b>Điểm đạt:</b> @lesson.PassScore% · @lesson.Questions.Count câu hỏi</p>
+                                            @foreach (var q in lesson.Questions)
+                                            {
+                                                <div class="mt-3">
+                                                    <p class="font-semibold">Câu @q.OrderIndex. @q.QuestionText</p>
+                                                    <div class="mt-1 flex flex-wrap gap-2">
+                                                        @foreach (var o in q.Options)
+                                                        {
+                                                            <span class="review-option @(o.IsCorrect ? "is-correct" : "")">@if (o.IsCorrect) { <i data-lucide="check" class="w-3.5 h-3.5"></i> }@o.OptionText</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        @foreach (var r in lesson.Resources)
+                                        {
+                                            <p class="mt-2 flex items-center gap-2 text-sm"><i data-lucide="paperclip" class="w-4 h-4"></i><a href="@r.FileUrl" target="_blank">@r.FileName</a> <span class="muted">(@(r.FileSize / 1024) KB)</span></p>
+                                        }
+                                    </div>
+                                </details>
+                            }
+                        </details>
+                    }
+                    @if (Model.Sections.Count == 0)
+                    {
+                        <p class="muted">Khóa học chưa có chương nào.</p>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= CỘT PHẢI ================= -->
+        <aside class="space-y-6 lg:sticky lg:top-24">
+            <section class="panel review-card">
+                <h2 class="review-title"><i data-lucide="info"></i> Tổng quan</h2>
+                <dl class="review-facts">
+                    <dt>Giá bán</dt>
+                    <dd>
+                        <b class="text-blue-600">@UiText.Price(Model.CurrentPrice)</b>
+                        @if (Model.CurrentPrice < Model.Price) { <del class="muted text-xs ml-1">@UiText.Price(Model.Price)</del> }
+                    </dd>
+                    @if (Model.DiscountPrice != null)
+                    {
+                        <dt>Khuyến mãi</dt>
+                        <dd>@Model.DiscountStart?.ToString("dd/MM") – @Model.DiscountEnd?.ToString("dd/MM/yyyy")</dd>
+                    }
+                    <dt>Số chương / bài</dt><dd>@Model.Sections.Count / @lessons.Count</dd>
+                    <dt>Thời lượng</dt><dd>@UiText.Duration(totalSec)</dd>
+                    <dt>Bài kiểm tra</dt><dd>@lessons.Count(l => l.LessonType == LessonType.Quiz)</dd>
+                    <dt>Bài học thử</dt><dd>@lessons.Count(l => l.IsFreePreview)</dd>
+                    <dt>Đánh giá</dt><dd>@(Model.AvgRating > 0 ? Model.AvgRating.ToString("0.0") + " ★" : "Chưa có")</dd>
+                    <dt>Ngày tạo</dt><dd>@Model.CreatedAt.ToString("dd/MM/yyyy")</dd>
+                    <dt>Cập nhật</dt><dd>@(Model.UpdatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd>
+                    <dt>Xuất bản</dt><dd>@(Model.PublishedAt?.ToString("dd/MM/yyyy") ?? "Chưa xuất bản")</dd>
+                </dl>
+            </section>
+
+            <section class="panel review-card">
+                <h2 class="review-title"><i data-lucide="clapperboard"></i> Video giới thiệu</h2>
+                @if (trailer != null)
+                {
+                    <div class="aspect-video"><iframe src="@trailer" class="w-full h-full rounded-xl" allowfullscreen></iframe></div>
+                }
+                else if (!string.IsNullOrEmpty(Model.TrailerUrl))
+                {
+                    <a href="@Model.TrailerUrl" target="_blank" class="text-sm break-all">@Model.TrailerUrl</a>
+                }
+                else
+                {
+                    <p class="muted text-sm">Chưa có video giới thiệu.</p>
+                }
+            </section>
+        </aside>
+    </div>
+</div>
+
+<partial name="_RejectCourseDialog" />

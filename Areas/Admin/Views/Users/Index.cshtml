@@ -1,0 +1,112 @@
+@model AdminUsersViewModel
+@{
+    ViewData["Title"] = Model.Deleted ? "Tài khoản đã xóa" : "Quản lý tài khoản";
+}
+
+<div class="admin-heading">
+    <div>
+        <span class="eyebrow">NGƯỜI DÙNG</span>
+        <h1>@ViewData["Title"]</h1>
+        <p class="muted">Tìm kiếm, phân quyền, khóa và xóa mềm tài khoản.</p>
+    </div>
+    <div class="admin-row-actions">
+        <a asp-action="Create" class="button"><i data-lucide="user-plus" class="w-4 h-4"></i>Thêm tài khoản</a>
+    </div>
+</div>
+
+<!-- Bộ lọc -->
+<form method="get" class="panel admin-filter-bar">
+    <input type="hidden" name="deleted" value="@Model.Deleted.ToString().ToLower()" />
+    <input name="q" value="@Model.Query" placeholder="Tìm họ tên hoặc email..." />
+    <select name="role">
+        <option value="">Tất cả vai trò</option>
+        @foreach (var role in AppRoles.All)
+        {
+            <option value="@role" selected="@(Model.Role == role)">@UiText.Role(role)</option>
+        }
+    </select>
+    <select name="status">
+        <option value="">Tất cả trạng thái</option>
+        <option value="active" selected="@(Model.Status == "active")">Đang hoạt động</option>
+        <option value="locked" selected="@(Model.Status == "locked")">Đang bị khóa</option>
+    </select>
+    <button class="button"><i data-lucide="search" class="w-4 h-4"></i>Tìm kiếm</button>
+    <a asp-action="Index" asp-route-deleted="@Model.Deleted" class="button secondary"><i data-lucide="rotate-ccw" class="w-4 h-4"></i>Đặt lại</a>
+</form>
+
+<div class="panel admin-section">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Ngày tạo</th><th>Trạng thái</th><th class="col-actions">Thao tác</th></tr></thead>
+            <tbody>
+                @foreach (var u in Model.Users)
+                {
+                    var isAdmin = u.RoleCodes.Contains(AppRoles.Admin);
+                    <tr>
+                        <td>
+                            <div class="admin-user-cell">
+                                <span class="admin-user-avatar">@u.FullName.FirstOrDefault()</span>
+                                <div><strong class="admin-cell-title">@u.FullName</strong><small class="admin-cell-sub">@u.Email</small></div>
+                            </div>
+                        </td>
+                        <td>@foreach (var r in u.RoleCodes) { <span class="badge admin-role-badge">@UiText.Role(r)</span> }</td>
+                        <td class="nowrap">@u.CreatedAt.ToString("dd/MM/yyyy")</td>
+                        <td class="nowrap">
+                            @if (Model.Deleted) { <span class="badge rejected">Đã xóa mềm</span> }
+                            else if (!u.IsActive) { <span class="badge pending">Đang bị khóa</span> }
+                            else { <span class="badge approved">Hoạt động</span> }
+                        </td>
+                        <td class="col-actions">
+                            <div class="icon-actions">
+                                @if (Model.Deleted)
+                                {
+                                    <form asp-action="Restore" method="post" data-confirm="Khôi phục tài khoản @u.Email?">
+                                        <input type="hidden" name="id" value="@u.Id" />
+                                        <button class="icon-btn approve" data-tip="Khôi phục" aria-label="Khôi phục"><i data-lucide="rotate-ccw"></i></button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <a asp-action="Edit" asp-route-id="@u.Id" class="icon-btn edit" data-tip="Sửa / phân quyền" aria-label="Sửa"><i data-lucide="user-pen"></i></a>
+                                    @if (!isAdmin && u.Id != Model.CurrentUserId)
+                                    {
+                                        <form asp-action="SetActive" method="post" data-confirm="@(u.IsActive ? "Khóa tài khoản này?" : "Mở khóa tài khoản này?")">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <input type="hidden" name="active" value="@((!u.IsActive).ToString())" />
+                                            <button class="icon-btn warn" data-tip="@(u.IsActive ? "Khóa" : "Mở khóa")" aria-label="@(u.IsActive ? "Khóa" : "Mở khóa")">
+                                                <i data-lucide="@(u.IsActive ? "lock" : "lock-open")"></i>
+                                            </button>
+                                        </form>
+                                        <form asp-action="Delete" method="post" data-confirm="Xóa mềm tài khoản này? Dữ liệu vẫn được giữ lại.">
+                                            <input type="hidden" name="id" value="@u.Id" />
+                                            <button class="icon-btn danger" data-tip="Xóa mềm" aria-label="Xóa"><i data-lucide="trash-2"></i></button>
+                                        </form>
+                                    }
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.Users.Count == 0)
+        {
+            <div class="admin-empty"><i data-lucide="search-x"></i><h3>Không tìm thấy tài khoản</h3></div>
+        }
+    </div>
+</div>
+
+<!-- Phân trang -->
+<div class="admin-pagination">
+    <span><b>@Model.Total</b> kết quả · Trang @Model.Page / @Math.Max(1, Model.TotalPages)</span>
+    <div>
+        @if (Model.Page > 1)
+        {
+            <a asp-action="Index" asp-route-q="@Model.Query" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-deleted="@Model.Deleted" asp-route-page="@(Model.Page - 1)"><i data-lucide="chevron-left"></i>Trước</a>
+        }
+        @if (Model.Page < Model.TotalPages)
+        {
+            <a asp-action="Index" asp-route-q="@Model.Query" asp-route-role="@Model.Role" asp-route-status="@Model.Status" asp-route-deleted="@Model.Deleted" asp-route-page="@(Model.Page + 1)">Tiếp<i data-lucide="chevron-right"></i></a>
+        }
+    </div>
+</div>

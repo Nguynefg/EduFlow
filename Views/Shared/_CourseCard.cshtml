@@ -1,0 +1,47 @@
+﻿@model Course
+@{
+    var lessonCount = Model.Sections.Sum(s => s.Lessons.Count);
+    var duration = Model.Sections.Sum(s => s.Lessons.Sum(l => l.DurationSec));
+
+    // Nhãn góc trái ảnh bìa
+    string? badge = null, badgeCss = "";
+    if (Model.AvgRating >= 4.8m) { badge = "Bán chạy"; badgeCss = "badge-green"; }
+    else if (Model.AvgRating >= 4.5m) { badge = "Phổ biến"; badgeCss = "badge-blue"; }
+    else if (Model.PublishedAt >= DateTime.Now.AddDays(-14)) { badge = "Mới"; badgeCss = "badge-amber"; }
+}
+@* Thẻ khóa học dùng chung (trang chủ, danh sách khóa học) *@
+<article class="course-tile">
+    <a class="course-tile-cover" href="@(string.IsNullOrEmpty(Model.Slug)?Url.Action("Details","Courses",new{id=Model.Id,area=""}):Url.RouteUrl("course-slug",new{slug=Model.Slug,area=""}))">
+        <partial name="_CourseCover" model="Model" />
+        @if (badge != null)
+        {
+            <span class="course-badge @badgeCss">@badge</span>
+        }
+    </a>
+    <div class="course-tile-body">
+        <div class="course-chips">
+            <span>@Model.Category?.Name</span>
+            <span>@UiText.Level(Model.Level)</span>
+            <span>@(Model.Price == 0 ? "Miễn phí" : "Trả phí")</span>
+        </div>
+        <h3><a href="@(string.IsNullOrEmpty(Model.Slug)?Url.Action("Details","Courses",new{id=Model.Id,area=""}):Url.RouteUrl("course-slug",new{slug=Model.Slug,area=""}))" title="@Model.Title">@Model.Title</a></h3>
+        <p class="course-teacher">@Model.Instructor?.FullName</p>
+        <div class="course-meta">
+            <span><i data-lucide="clock-3"></i>@(duration > 0 ? UiText.Duration(duration) : "—")</span>
+            <span><i data-lucide="book-open"></i>@lessonCount bài học</span>
+        </div>
+        <div class="course-tile-footer">
+            <span class="course-rating">
+                <span class="text-amber-400">★</span>
+                @(Model.AvgRating > 0 ? Model.AvgRating.ToString("0.0") : "Mới")
+            </span>
+            <span class="course-price @(Model.CurrentPrice == 0 ? "is-free" : "")">
+                @if (Model.CurrentPrice < Model.Price)
+                {
+                    <del>@UiText.Price(Model.Price)</del>
+                }
+                @UiText.Price(Model.CurrentPrice)
+            </span>
+        </div>
+    </div>
+</article>

@@ -1,0 +1,27 @@
+@model List<Order>
+@{ViewData["Title"]="Đối soát đơn hàng";}
+<a asp-action="Index">← Duyệt rút tiền</a>
+<h1>Đối soát đơn hàng</h1>
+<p class="muted">200 đơn gần nhất. Đơn trả phí chỉ được ghi nhận qua callback có chữ ký hợp lệ.</p>
+<section class="panel">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Đơn / người mua</th>
+<th>Ngày tạo</th>
+<th>Tổng tiền</th>
+<th>Trạng thái</th>
+<th>Giao dịch</th>
+</tr>
+</thead>
+<tbody>@foreach(var o in Model){<tr>
+<td>#@o.Id / User #@o.UserId</td>
+<td>@o.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+<td>@UiText.Price(o.TotalPrice)</td>
+<td>@UiText.OrderStatus(o.Status)</td>
+<td>@foreach(var p in o.Payments){<p>@p.Gateway · @p.GatewayTxnId · @UiText.PaymentStatus(p.Status)</p>}</td>
+</tr>}</tbody>
+</table>
+</div>
+</section>

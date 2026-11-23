@@ -1,0 +1,80 @@
+@model Lesson
+@* Danh sách câu hỏi của bài kiểm tra — trang Sửa bài học nạp lại phần này sau mỗi thao tác (quiz-builder.js) *@
+@{
+    var questions = Model.Questions.OrderBy(q => q.OrderIndex).ToList();
+    var singleCount = questions.Count(q => q.QuestionType != "fill");
+    string Letter(int i) => ((char)('A' + i)).ToString();
+}
+
+<div class="quiz-summary">
+    <span><i data-lucide="list-checks"></i><b>@questions.Count</b> câu hỏi</span>
+    <span><i data-lucide="circle-dot"></i>@singleCount trắc nghiệm</span>
+    <span><i data-lucide="text-cursor-input"></i>@(questions.Count - singleCount) điền khuyết</span>
+    @if (questions.Count > 0 && Model.PassScore is int pass)
+    {
+        <span class="quiz-summary-pass"><i data-lucide="target"></i>Cần đúng ≥ @Math.Ceiling(questions.Count * pass / 100.0) / @questions.Count câu để đạt @pass%</span>
+    }
+</div>
+
+@if (questions.Count == 0)
+{
+    <div class="quiz-empty">
+        <i data-lucide="message-circle-question"></i>
+        <strong>Chưa có câu hỏi nào</strong>
+        <span>Soạn câu hỏi đầu tiên ở khung phía trên.</span>
+    </div>
+}
+
+<ol class="quiz-list" data-quiz-list>
+    @for (var n = 0; n < questions.Count; n++)
+    {
+        var q = questions[n];
+        var options = q.Options.OrderBy(o => o.Id).ToList();
+        var data = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            id = q.Id,
+            type = q.QuestionType,
+            text = q.QuestionText,
+            options = options.Select(o => o.OptionText),
+            correct = Math.Max(0, options.FindIndex(o => o.IsCorrect))
+        });
+        <li class="quiz-card" data-id="@q.Id" data-question="@data" draggable="true">
+            <div class="quiz-card-head">
+                <span class="curriculum-grip" aria-hidden="true"><i data-lucide="grip-vertical"></i></span>
+                <span class="quiz-no">Câu @(n + 1)</span>
+                <span class="quiz-type @(q.QuestionType == "fill" ? "is-fill" : "")">@(q.QuestionType == "fill" ? "Điền khuyết" : "Trắc nghiệm")</span>
+                <div class="quiz-card-actions">
+                    <button type="button" class="quiz-act" data-quiz-move="-1" data-tip="Lên" aria-label="Lên" @(n == 0 ? "disabled" : "")><i data-lucide="chevron-up"></i></button>
+                    <button type="button" class="quiz-act" data-quiz-move="1" data-tip="Xuống" aria-label="Xuống" @(n == questions.Count - 1 ? "disabled" : "")><i data-lucide="chevron-down"></i></button>
+                    <button type="button" class="quiz-act" data-quiz-edit data-tip="Sửa câu hỏi" aria-label="Sửa"><i data-lucide="pencil"></i></button>
+                    <button type="button" class="quiz-act" data-quiz-duplicate data-tip="Nhân bản" aria-label="Nhân bản"><i data-lucide="copy"></i></button>
+                    <button type="button" class="quiz-act is-danger" data-quiz-delete data-tip="Xóa câu hỏi" aria-label="Xóa"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>
+            <p class="quiz-text">@q.QuestionText</p>
+            @if (q.QuestionType == "fill")
+            {
+                <div class="quiz-fill-answers">
+                    <small>Đáp án chấp nhận:</small>
+                    @foreach (var o in options)
+                    {
+                        <span><i data-lucide="check"></i>@o.OptionText</span>
+                    }
+                </div>
+            }
+            else
+            {
+                <ul class="quiz-options">
+                    @for (var i = 0; i < options.Count; i++)
+                    {
+                        <li class="@(options[i].IsCorrect ? "is-correct" : "")">
+                            <span class="quiz-letter">@Letter(i)</span>
+                            <span class="quiz-option-text">@options[i].OptionText</span>
+                            @if (options[i].IsCorrect) { <i data-lucide="circle-check"></i> }
+                        </li>
+                    }
+                </ul>
+            }
+        </li>
+    }
+</ol>

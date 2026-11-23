@@ -1,0 +1,110 @@
+﻿@model MyCoursesViewModel
+@{
+    ViewData["Title"] = "Khóa học đã mua";
+    var tabs = new (string Key, string Label, int Count)[]
+    {
+        ("all", "Tất cả", Model.TotalCount),
+        ("learning", "Đang học", Model.LearningCount),
+        ("not-started", "Chưa bắt đầu", Model.NotStartedCount),
+        ("completed", "Đã hoàn thành", Model.CompletedCount)
+    };
+}
+
+<div class="mc-head">
+    <div>
+        <span class="eyebrow">HỌC TẬP</span>
+        <h1>Khóa học đã mua</h1>
+        <p class="muted">Tiếp tục bài đang học dở hoặc ôn lại những khóa học đã hoàn thành.</p>
+    </div>
+    <a class="button secondary" asp-controller="Courses" asp-action="Index"><i data-lucide="compass" class="w-4 h-4"></i>Khám phá thêm khóa học</a>
+</div>
+
+<div class="mc-stats">
+    <div><span class="mc-stat-icon"><i data-lucide="library-big"></i></span><b>@Model.TotalCount</b><small>Khóa học</small></div>
+    <div><span class="mc-stat-icon is-amber"><i data-lucide="flame"></i></span><b>@Model.LearningCount</b><small>Đang học</small></div>
+    <div><span class="mc-stat-icon is-green"><i data-lucide="trophy"></i></span><b>@Model.CompletedCount</b><small>Đã hoàn thành</small></div>
+    <div><span class="mc-stat-icon is-sky"><i data-lucide="circle-check-big"></i></span><b>@Model.TotalCompletedLessons</b><small>Bài học đã xong</small></div>
+</div>
+
+@if (Model.TotalCount == 0)
+{
+    <div class="panel mc-empty">
+        <i data-lucide="book-open"></i>
+        <strong>Bạn chưa có khóa học nào</strong>
+        <span class="muted">Chọn một khóa học phù hợp và bắt đầu học ngay hôm nay.</span>
+        <a class="button" asp-controller="Courses" asp-action="Index">Xem danh sách khóa học</a>
+    </div>
+}
+else
+{
+    <div class="mc-toolbar">
+        <nav class="mc-tabs" aria-label="Lọc khóa học">
+            @foreach (var t in tabs)
+            {
+                <a asp-action="Index" asp-route-filter="@(t.Key == "all" ? null : t.Key)" asp-route-q="@Model.Query"
+                   class="@(Model.Filter == t.Key ? "is-active" : "")" aria-current="@(Model.Filter == t.Key ? "page" : null)">@t.Label <em>@t.Count</em></a>
+            }
+        </nav>
+        <form method="get" class="mc-search" role="search">
+            @if (Model.Filter != "all") { <input type="hidden" name="filter" value="@Model.Filter" /> }
+            <i data-lucide="search"></i>
+            <input type="search" name="q" value="@Model.Query" placeholder="Tìm theo tên khóa học, giảng viên..." aria-label="Tìm khóa học" />
+        </form>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="panel mc-empty">
+            <i data-lucide="search-x"></i>
+            <strong>Không có khóa học phù hợp</strong>
+            <a class="button secondary" asp-action="Index">Xem tất cả</a>
+        </div>
+    }
+
+    <div class="mc-grid">
+        @foreach (var item in Model.Items)
+        {
+            var c = item.Course;
+            var label = item.IsCompleted ? "Học lại" : item.IsStarted ? "Tiếp tục học" : "Bắt đầu học";
+            <article class="mc-card">
+                <a class="mc-cover" asp-action="Learn" asp-route-id="@c.Id" asp-route-lessonId="@item.ContinueLessonId">
+                    <partial name="_CourseCover" model="c" />
+                    <span class="mc-cover-play"><i data-lucide="play"></i></span>
+                    @if (item.IsCompleted)
+                    {
+                        <span class="mc-badge is-done"><i data-lucide="trophy"></i>Hoàn thành</span>
+                    }
+                    else if (!item.IsStarted)
+                    {
+                        <span class="mc-badge">Mới</span>
+                    }
+                </a>
+                <div class="mc-body">
+                    <span class="mc-cat">@c.Category?.Name · @UiText.Level(c.Level)</span>
+                    <h3><a asp-controller="Courses" asp-action="Details" asp-route-id="@c.Id" title="@c.Title">@c.Title</a></h3>
+                    <p class="mc-teacher"><i data-lucide="user-round"></i>@c.Instructor?.FullName</p>
+
+                    <div class="mc-progress">
+                        <div class="mc-progress-top">
+                            <span>@item.CompletedLessons/@item.LessonCount bài</span>
+                            <b>@item.Percent%</b>
+                        </div>
+                        <div class="mc-bar @(item.IsCompleted ? "is-done" : "")"><i style="width:@item.Percent%"></i></div>
+                    </div>
+
+                    @if (!item.IsCompleted && item.ContinueLessonTitle != null)
+                    {
+                        <p class="mc-next" title="@item.ContinueLessonTitle"><i data-lucide="corner-down-right"></i>@item.ContinueLessonTitle</p>
+                    }
+
+                    <div class="mc-foot">
+                        <small class="muted" title="Hoạt động gần nhất">
+                            <i data-lucide="clock-3"></i>@(item.IsStarted ? "Học lần cuối " + item.LastActivity.ToString("dd/MM/yyyy") : "Mua ngày " + item.Enrollment.EnrolledAt.ToString("dd/MM/yyyy"))
+                        </small>
+                        <a class="button small mc-continue" asp-action="Learn" asp-route-id="@c.Id" asp-route-lessonId="@item.ContinueLessonId">@label</a>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}

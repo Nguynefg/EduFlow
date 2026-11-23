@@ -1,0 +1,33 @@
+﻿<aside id="adminSidebar" class="admin-sidebar w-64 flex flex-col fixed lg:sticky top-0 h-screen z-50 transition-transform duration-300 -translate-x-full lg:translate-x-0 flex-shrink-0">
+    <div class="admin-sidebar-scroll">
+        <div class="admin-brand-row">
+            <a href="/Admin" class="admin-brand">
+                <span class="admin-brand-icon"><i data-lucide="shield-check"></i></span>
+                <span>Edu<span class="admin-accent">Admin</span><small>Trung tâm quản trị</small></span>
+            </a>
+            <button type="button" data-ui-action="toggle-admin-sidebar" class="admin-icon-button lg:hidden" aria-label="Đóng menu"><i data-lucide="x"></i></button>
+        </div>
+        <div class="admin-profile">
+            <span class="admin-profile-icon"><i data-lucide="shield-check"></i></span>
+            <div><strong>@User.Identity?.Name</strong><small>Quản trị viên</small></div>
+        </div>
+
+        @await Component.InvokeAsync("AdminMenu")
+
+        <nav class="admin-navigation admin-quick-links">
+            <p class="admin-nav-caption">Điều hướng nhanh</p>
+            @if(Context.RequestServices.GetRequiredService<EduFlow.Web.Helpers.EmailSender>().IsSimulation){<a href="/Mailbox?all=true" class="admin-nav-link"><i data-lucide="mail"></i>Hộp thư mô phỏng</a>}
+            <a href="/Admin/Community" class="admin-nav-link"><i data-lucide="message-square-text"></i>Đánh giá và hỏi đáp</a>
+            <a href="/Admin/Finance/TaxReport" class="admin-nav-link"><i data-lucide="receipt-text"></i>Sổ thuế TNCN</a>
+            <a href="/Admin/Finance/Revenue" class="admin-nav-link"><i data-lucide="chart-no-axes-combined"></i>Doanh thu nền tảng</a>
+            <a href="/" class="admin-nav-link"><i data-lucide="home"></i>Về trang chủ</a>
+            <a href="/Profile" class="admin-nav-link"><i data-lucide="user-round"></i>Hồ sơ của tôi</a>
+        </nav>
+    </div>
+    <div class="admin-sidebar-footer">
+        <button type="button" data-ui-action="toggle-admin-theme" class="admin-theme-toggle"><i id="adminThemeIcon" data-lucide="sun"></i><span>Giao diện: <span id="adminThemeText">Tối</span></span></button>
+        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post">
+            <button type="submit" title="Đăng xuất" class="admin-icon-button admin-logout"><i data-lucide="log-out"></i></button>
+        </form>
+    </div>
+</aside>

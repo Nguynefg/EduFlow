@@ -1,0 +1,78 @@
+@model ContactViewModel
+@{
+    ViewData["Title"] = "Liên hệ";
+    ViewData["FullWidth"] = true;
+}
+
+<section class="catalog-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <span class="inline-block px-4 py-1.5 rounded-full bg-white border border-blue-100 text-xs font-bold text-blue-700">LIÊN HỆ</span>
+        <h1 class="mt-4 text-4xl sm:text-5xl font-black text-slate-900">Chúng tôi luôn sẵn sàng <span class="text-blue-600">hỗ trợ bạn</span></h1>
+        <p class="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">Có câu hỏi về khóa học, tài khoản hay muốn hợp tác giảng dạy? Gửi tin nhắn cho EduFlow, chúng tôi sẽ phản hồi qua email.</p>
+    </div>
+</section>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid lg:grid-cols-3 gap-8">
+    <!-- Thông tin liên hệ -->
+    <aside class="space-y-4">
+        @foreach (var info in new[] {
+            ("mail", "Email", "hotro@eduflow.vn", "Phản hồi trong vòng 24 giờ làm việc"),
+            ("phone", "Điện thoại", "0123 456 789", "Thứ 2 – Thứ 7, 8:00 – 17:30"),
+            ("map-pin", "Địa chỉ", "Văn phòng EduFlow", "Cập nhật địa chỉ thật tại Views/Home/Contact.cshtml") })
+        {
+            <div class="contact-card">
+                <span class="contact-icon"><i data-lucide="@info.Item1" class="w-5 h-5"></i></span>
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">@info.Item2</p>
+                    <p class="mt-1 font-bold text-slate-900">@info.Item3</p>
+                    <p class="text-sm text-slate-500">@info.Item4</p>
+                </div>
+            </div>
+        }
+        <div class="contact-card bg-navy-900 text-white border-0">
+            <span class="contact-icon bg-white/10 text-amber-300"><i data-lucide="presentation" class="w-5 h-5"></i></span>
+            <div>
+                <p class="font-bold">Muốn trở thành giảng viên?</p>
+                <p class="text-sm text-slate-300 mt-1">Gửi hồ sơ định danh để được quản trị viên duyệt.</p>
+                <a href="/Home/Teach" class="inline-flex items-center gap-1 mt-3 text-sm font-bold text-amber-300">Đăng ký giảng dạy <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Form liên hệ -->
+    <section class="lg:col-span-2 contact-form">
+        <h2 class="text-2xl font-black text-slate-900">Gửi tin nhắn cho chúng tôi</h2>
+        <p class="mt-1 text-sm text-slate-500">Các ô có dấu * là bắt buộc.</p>
+        <form asp-action="Contact" method="post" class="mt-6 grid sm:grid-cols-2 gap-4">
+            <div>
+                <label asp-for="FullName">Họ và tên *</label>
+                <input asp-for="FullName" class="filter-input" />
+                <span asp-validation-for="FullName" class="validation"></span>
+            </div>
+            <div>
+                <label asp-for="Email">Email *</label>
+                <input asp-for="Email" class="filter-input" />
+                <span asp-validation-for="Email" class="validation"></span>
+            </div>
+            <div class="sm:col-span-2">
+                <label asp-for="Subject">Chủ đề *</label>
+                <select asp-for="Subject" class="filter-input">
+                    <option>Hỗ trợ học viên</option>
+                    <option>Thanh toán và học phí</option>
+                    <option>Đăng ký giảng dạy</option>
+                    <option>Báo lỗi hệ thống</option>
+                    <option>Hợp tác</option>
+                    <option>Khác</option>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
+                <label asp-for="Message">Nội dung *</label>
+                <textarea asp-for="Message" rows="6" class="filter-input" placeholder="Bạn cần EduFlow hỗ trợ điều gì?"></textarea>
+                <span asp-validation-for="Message" class="validation"></span>
+            </div>
+            <div class="sm:col-span-2">
+                <button class="btn-primary"><i data-lucide="send" class="w-4 h-4"></i> Gửi tin nhắn</button>
+            </div>
+        </form>
+    </section>
+</div>

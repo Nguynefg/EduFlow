@@ -1,0 +1,168 @@
+﻿@model Course
+@{
+    var inAdmin = ViewContext.RouteData.Values["area"]?.ToString() == "Admin";
+    if (inAdmin) Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+    ViewData["Title"] = "Nội dung khóa học";
+    var lessonTotal = Model.Sections.Sum(s => s.Lessons.Count);
+    var durationTotal = Model.Sections.SelectMany(s => s.Lessons).Sum(l => l.DurationSec);
+    string LessonIcon(string type) => type == LessonType.Video ? "play-circle" : type == LessonType.Quiz ? "list-checks" : "file-text";
+}
+@section Styles { <link rel="stylesheet" href="~/css/curriculum.css" asp-append-version="true" /> }
+
+<a asp-controller="Instructor" asp-action="Index" class="studio-back"><i data-lucide="arrow-left"></i>@(inAdmin ? "Quản lý khóa học" : "Studio giảng viên")</a>
+
+<div class="curriculum-editor">
+    <header class="curriculum-heading studio-page-head">
+        <div class="min-w-0">
+            <span class="eyebrow">NỘI DUNG KHÓA HỌC · <span class="badge @UiText.CourseStatusCss(Model.Status)">@UiText.CourseStatus(Model.Status)</span></span>
+            <h1>@Model.Title</h1>
+            <div class="studio-card-facts">
+                <span><i data-lucide="layers"></i>@Model.Sections.Count chương</span>
+                <span><i data-lucide="play-circle"></i>@lessonTotal bài học</span>
+                @if (durationTotal > 0) { <span><i data-lucide="clock-3"></i>@UiText.Duration(durationTotal)</span> }
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+        <a class="button secondary" asp-controller="Instructor" asp-action="Edit" asp-route-id="@Model.Id"><i data-lucide="settings-2" class="w-4 h-4"></i>Thông tin khóa học</a>
+            @if (Model.Status is CourseStatus.Draft or CourseStatus.Rejected)
+            {
+                <form asp-controller="Instructor" asp-action="Submit" method="post" data-confirm="Gửi khóa học này để duyệt và xuất bản?">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="button"><i data-lucide="send" class="w-4 h-4" aria-hidden="true"></i>Gửi duyệt</button>
+                </form>
+            }
+            @if (inAdmin && Model.Status == CourseStatus.Pending)
+            {
+                <a class="button" asp-area="Admin" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.Id">Mở trang duyệt</a>
+            }
+        </div>
+    </header>
+
+    <div class="curriculum-grid">
+        <!-- CỘT TRÁI: danh sách chương + thêm chương -->
+        <aside class="panel curriculum-sidebar">
+            <h2 class="studio-card-title"><span><i data-lucide="list-ordered"></i></span>Các chương</h2>
+            <p class="curriculum-help">Kéo thả hoặc dùng nút mũi tên, sau đó bấm lưu thứ tự.</p>
+            @if (Model.Sections.Count > 0)
+            {
+                <form asp-action="Reorder" asp-route-id="@Model.Id" method="post" data-order>
+                    <ol data-items>
+                        @foreach (var chapter in Model.Sections)
+                        {
+                            <li draggable="true" data-id="@chapter.Id">
+                                <span class="curriculum-grip" aria-hidden="true"><i data-lucide="grip-vertical"></i></span>
+                                <a class="curriculum-chapter-link" href="#chapter-@chapter.Id">@chapter.Title</a>
+                                <div class="curriculum-move">
+                                    <button type="button" data-move="-1" aria-label="Lên" data-tip="Lên"><i data-lucide="chevron-up"></i></button>
+                                    <button type="button" data-move="1" aria-label="Xuống" data-tip="Xuống"><i data-lucide="chevron-down"></i></button>
+                                </div>
+                            </li>
+                        }
+                    </ol>
+                    <button class="button secondary small w-full"><i data-lucide="save" class="w-4 h-4"></i>Lưu thứ tự chương</button>
+                    <span role="status" class="validation"></span>
+                </form>
+            }
+            <form asp-action="AddSection" asp-route-id="@Model.Id" method="post" class="curriculum-add">
+                <label>Tên chương mới <input name="title" maxlength="255" placeholder="Ví dụ: Chương 1: Giới thiệu" required /></label>
+                <button class="button w-full"><i data-lucide="folder-plus" class="w-4 h-4"></i>Thêm chương</button>
+            </form>
+        </aside>
+
+        <!-- CỘT PHẢI: các chương và bài học -->
+        <div class="curriculum-main">
+            @if (Model.Sections.Count == 0)
+            {
+                <section class="panel studio-empty">
+                    <span class="studio-empty-icon"><i data-lucide="layers"></i></span>
+                    <h3>Chưa có chương nào</h3>
+                    <p class="muted">Thêm chương đầu tiên ở cột bên trái để bắt đầu xây dựng bài học.</p>
+                </section>
+            }
+
+            @{ var chapterNo = 0; }
+            @foreach (var chapter in Model.Sections)
+            {
+                chapterNo++;
+                <section class="panel curriculum-chapter" id="chapter-@chapter.Id">
+                    <header class="curriculum-chapter-head">
+                        <div class="curriculum-chapter-title">
+                            <span class="curriculum-chapter-no">@chapterNo</span>
+                            <div class="min-w-0">
+                                <h2>@chapter.Title</h2>
+                                <p class="curriculum-help">@chapter.Lessons.Count bài học</p>
+                            </div>
+                        </div>
+                        <div class="icon-actions">
+                            <a class="button small" asp-action="AddLesson" asp-route-id="@Model.Id" asp-route-sectionId="@chapter.Id"><i data-lucide="plus" class="w-4 h-4"></i>Thêm bài</a>
+                            <form asp-action="DeleteSection" asp-route-id="@Model.Id" method="post" data-confirm="Xóa chương này và toàn bộ bài học bên trong?">
+                                <input type="hidden" name="sectionId" value="@chapter.Id" />
+                                <button class="icon-btn danger" data-tip="Xóa chương" aria-label="Xóa chương"><i data-lucide="trash-2"></i></button>
+                            </form>
+                        </div>
+                    </header>
+
+                    <details class="curriculum-disclosure">
+                        <summary><i data-lucide="pencil-line"></i>Đổi tên chương</summary>
+                        <form asp-action="RenameSection" asp-route-id="@Model.Id" method="post" class="curriculum-inline">
+                            <input type="hidden" name="sectionId" value="@chapter.Id" />
+                            <input name="title" value="@chapter.Title" maxlength="255" required aria-label="Tên chương" />
+                            <button class="button small"><i data-lucide="check" class="w-4 h-4"></i>Lưu tên</button>
+                        </form>
+                    </details>
+
+                    @if (chapter.Lessons.Count > 0)
+                    {
+                        <form asp-action="Reorder" asp-route-id="@Model.Id" method="post" data-order>
+                            <input type="hidden" name="sectionId" value="@chapter.Id" />
+                            <ol data-items>
+                                @foreach (var lesson in chapter.Lessons)
+                                {
+                                    <li draggable="true" data-id="@lesson.Id" class="curriculum-lesson">
+                                        <span class="curriculum-grip" aria-hidden="true"><i data-lucide="grip-vertical"></i></span>
+                                        <span class="curriculum-lesson-icon type-@lesson.LessonType"><i data-lucide="@LessonIcon(lesson.LessonType)"></i></span>
+                                        <div class="curriculum-lesson-title">
+                                            <a asp-action="EditLesson" asp-route-id="@Model.Id" asp-route-lessonId="@lesson.Id">@lesson.Title</a>
+                                            <span class="curriculum-kind">
+                                                @UiText.LessonType(lesson.LessonType)
+                                                @if (lesson.DurationSec > 0) { <text> · @UiText.Duration(lesson.DurationSec)</text> }
+                                                @if (lesson.LessonType == LessonType.Quiz) { <text> · @lesson.Questions.Count câu</text> }
+                                            </span>
+                                            @if (lesson.IsFreePreview) { <span class="curriculum-kind is-free">Học thử</span> }
+                                        </div>
+                                        <div class="curriculum-move">
+                                            <a class="curriculum-edit" asp-action="EditLesson" asp-route-id="@Model.Id" asp-route-lessonId="@lesson.Id" data-tip="Sửa bài học" aria-label="Sửa bài học"><i data-lucide="pencil"></i></a>
+                                            <button type="button" data-move="-1" aria-label="Lên" data-tip="Lên"><i data-lucide="chevron-up"></i></button>
+                                            <button type="button" data-move="1" aria-label="Xuống" data-tip="Xuống"><i data-lucide="chevron-down"></i></button>
+                                        </div>
+                                    </li>
+                                }
+                            </ol>
+                            <button class="button secondary small"><i data-lucide="save" class="w-4 h-4"></i>Lưu thứ tự bài học</button>
+                            <span role="status" class="validation"></span>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="curriculum-empty-row"><i data-lucide="inbox"></i>Chương này chưa có bài học.</p>
+                    }
+
+                    <!-- Tóm tắt các bài kiểm tra trong chương: soạn câu hỏi ở trang Sửa bài học -->
+                    @foreach (var quiz in chapter.Lessons.Where(l => l.LessonType == LessonType.Quiz))
+                    {
+                        <a class="curriculum-quiz-link @(quiz.Questions.Count == 0 ? "is-empty" : "")" asp-action="EditLesson" asp-route-id="@Model.Id" asp-route-lessonId="@quiz.Id">
+                            <span class="curriculum-lesson-icon type-quiz"><i data-lucide="list-checks"></i></span>
+                            <span class="min-w-0">
+                                <b>@quiz.Title</b>
+                                <small>@(quiz.Questions.Count == 0 ? "Chưa có câu hỏi — bấm để soạn" : $"{quiz.Questions.Count} câu hỏi · điểm đạt {quiz.PassScore}%")</small>
+                            </span>
+                            <span class="curriculum-quiz-cta">Soạn câu hỏi<i data-lucide="arrow-right"></i></span>
+                        </a>
+                    }
+                </section>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts { <script src="~/js/curriculum.js" asp-append-version="true"></script> }

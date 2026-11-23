@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/App_Data/
+.vs/
+*.user
+*.suo
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+
+# Local generated artifacts
+work/
+
+**/wwwroot/uploads/course-covers/

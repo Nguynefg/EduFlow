@@ -1,0 +1,13 @@
+@model Course
+@* Ảnh bìa khóa học: có ảnh thì hiện ảnh, chưa có thì vẽ nền màu + icon theo danh mục *@
+@if (!string.IsNullOrEmpty(Model.ThumbnailUrl))
+{
+    <img src="@Model.ThumbnailUrl" alt="@Model.Title" loading="lazy" />
+}
+else
+{
+    <div class="course-cover @CourseVisual.Cover(Model.Id)">
+        <i data-lucide="@CourseVisual.Icon(Model.Category?.Name)" class="course-cover-icon"></i>
+        <span class="course-cover-bars"><i></i><i></i><i></i><i></i><i></i></span>
+    </div>
+}

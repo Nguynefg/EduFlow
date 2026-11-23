@@ -1,0 +1,74 @@
+﻿@model PayoutViewModel
+@{ViewData["Title"]="Rút tiền";}
+@section Styles { <link rel="stylesheet" href="~/css/tax.css" asp-append-version="true" /> }
+@section Scripts { <script src="~/js/payout-tax.js" asp-append-version="true"></script> }
+<div class="page-heading">
+<div>
+<span class="eyebrow">THU NHẬP GIẢNG VIÊN</span>
+<h1>@(Model.SimulationEnabled ? "Rút tiền mô phỏng" : "Rút tiền về ngân hàng")</h1>
+@if(Model.SimulationEnabled){<p class="notice">Đang thực hành toàn bộ quy trình. Bạn có thể dùng thông tin định danh và ngân hàng mẫu hợp lệ về định dạng; không cần tài khoản ngân hàng thật.</p>}
+<a class="button button-outline" asp-action="Revenue">Xem doanh thu</a>
+<p class="muted">Số tiền yêu cầu được giữ lại; từ chối sẽ hoàn về số dư khả dụng.</p>
+</div>
+</div>
+<div class="checkout-grid">
+<section class="panel">
+<h2>@(Model.SimulationEnabled ? "Số dư mô phỏng có thể rút" : "Số dư tiền thật được rút")</h2>
+<p class="hint">@(Model.SimulationEnabled ? "Mua khóa học và xác nhận thanh toán mô phỏng sẽ tăng số dư này. Rút tiền, thuế và biên nhận đều là mô phỏng; không chuyển khoản ngân hàng." : "Chỉ tính giao dịch thật đã xác nhận. Không cộng tiền thử nghiệm vào số dư thật.")</p>
+<p class="finance-balance">@UiText.Money(Model.WithdrawableBalance)</p>
+<p>@Model.Profile.BankName · @Model.Profile.BankAccountNumber</p>
+<p>@Model.Profile.BankAccountName</p>
+<form asp-action="RequestPayout" method="post" id="payoutForm" data-tax-threshold="@EduFlow.Web.Services.PersonalTax.Threshold.ToString("0")" data-tax-rate="@EduFlow.Web.Services.PersonalTax.Rate.ToString("0")">
+<label for="amount">Số tiền trước thuế cần rút (VND)</label>
+<input id="amount" name="amount" type="number" min="1" max="@Model.WithdrawableBalance.ToString("0",System.Globalization.CultureInfo.InvariantCulture)" step="1" required/>
+<div class="tax-options">
+<div><label for="taxIdentifier">MST / số định danh cá nhân dùng cho thuế</label><input id="taxIdentifier" name="taxIdentifier" value="@(Model.Profile.TaxId ?? Model.Profile.IdentityCard)" maxlength="14" pattern="([0-9]{10}(-[0-9]{3})?|[0-9]{12})" required /></div>
+<label><input type="checkbox" name="taxDeclared" value="true" required /> Tôi là cá nhân cư trú nhận thù lao, không ký HĐLĐ hoặc HĐLĐ dưới 3 tháng; thông tin định danh thuế trong hồ sơ là chính xác.</label>
+<label><input type="checkbox" id="voluntaryTax" name="voluntaryTax" value="true" /> Tôi yêu cầu khấu trừ 10% cả khi khoản chi dưới 5 triệu đồng.</label>
+</div>
+<div class="tax-summary" aria-live="polite"><p>Thuế TNCN dự kiến: <strong id="taxPreview">—</strong></p><p>Thực nhận dự kiến: <strong id="netPreview">—</strong></p></div>
+<p class="hint">Từ 5 triệu đồng/lần: khấu trừ 10% trên toàn bộ khoản thù lao trước thuế. Dưới mức này: khấu trừ khi bạn yêu cầu. Admin kiểm tra hồ sơ trước khi duyệt. Không chia nhỏ một lần chi trả để tránh khấu trừ.</p>
+<p class="hint">Nếu có HĐLĐ từ 3 tháng, không cư trú hoặc đề nghị áp dụng cam kết tạm chưa khấu trừ, liên hệ kế toán; luồng này chưa hỗ trợ các trường hợp đó.</p>
+<button class="button">Gửi yêu cầu</button>
+</form>
+</section>
+<aside class="panel">
+<h2>Quy trình xử lý</h2>
+<ol>
+<li>Gửi yêu cầu trong số dư khả dụng.</li>
+<li>@(Model.SimulationEnabled ? "Quản trị viên duyệt và xác nhận chi trả mô phỏng." : "Quản trị viên duyệt và chuyển khoản.")</li>
+<li>@(Model.SimulationEnabled ? "Tải biên nhận mô phỏng sau khi admin xác nhận chi trả." : "Nhận biên lai khi yêu cầu đã được thanh toán.")</li>
+</ol>
+<p class="hint">Không cần cung cấp mật khẩu hay OTP ngân hàng cho EduFlow.</p>
+</aside>
+</div>
+<section class="panel mt-6">
+<h2>Lịch sử yêu cầu</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Trước thuế</th>
+<th>Thuế TNCN</th>
+<th>Thực nhận</th>
+<th>Ngày gửi</th>
+<th>Trạng thái</th>
+<th>Ghi chú</th>
+<th>Biên lai</th>
+</tr>
+</thead>
+<tbody>@foreach(var r in Model.Requests){<tr>
+<td>#@r.Id</td>
+<td>@UiText.Money(r.Amount)</td>
+<td>@(r.TaxAmount.HasValue ? UiText.Money(r.TaxAmount.Value) : "Chưa xác định")<small class="muted">@(r.Status == "pending" ? " · Dự kiến" : r.Status == "rejected" ? " · Đã hủy" : "")</small></td>
+<td>@(r.NetAmount.HasValue ? UiText.Money(r.NetAmount.Value) : "Chưa xác định")</td>
+<td>@r.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+<td>@UiText.PayoutStatus(r.Status) @if(r.IsTest){<small class="muted"> · Mô phỏng</small>}</td>
+<td>@r.AdminNote</td>
+<td>@if(r.ReceiptUrl!=null || (r.IsTest && r.Status=="paid")){<a asp-action="Receipt" asp-route-id="@r.Id">Tải biên lai</a>}</td>
+</tr>}</tbody>
+</table>
+</div>
+</section>
+

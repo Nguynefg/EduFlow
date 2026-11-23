@@ -1,0 +1,62 @@
+@model MegaMenuViewModel
+@{
+    var active = ViewContext.RouteData.Values["controller"]?.ToString() == "Courses";
+
+}
+@* Rê chuột (hoặc nhấn Tab tới) "Khóa học" để mở bảng menu *@
+<div class="mega-menu">
+    <a href="/Courses" class="mega-trigger @(active ? "is-active" : "")">
+        Khóa học <i data-lucide="chevron-down" class="w-4 h-4"></i>
+    </a>
+
+    <div class="mega-panel">
+        <!-- Cột trái: danh mục -->
+        <div class="mega-categories">
+            <div class="mega-heading">
+                <span>DANH MỤC KHÓA HỌC</span>
+                <a href="/Courses" class="mega-viewall">Xem tất cả khóa học <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+            </div>
+            @if (Model.Categories.Count == 0)
+            {
+                <p class="text-sm text-slate-500 py-3">Chưa có danh mục.</p>
+            }
+            <div class="mega-category-grid">
+                @foreach (var item in Model.Categories)
+                {
+                    <a href="@Url.RouteUrl("category-slug",new{slug=item.Category.Slug})" class="mega-category">
+                        <i data-lucide="@CourseVisual.Icon(item.Category.Name)" class="w-5 h-5 text-blue-600"></i>
+                        <span class="flex-1">@item.Category.Name</span>
+                        <span class="mega-count">@item.CourseCount</span>
+                    </a>
+                }
+            </div>
+        </div>
+
+        <!-- Cột phải: khóa học phổ biến -->
+        <div class="mega-popular">
+            <div class="mega-heading"><span>KHÓA HỌC PHỔ BIẾN</span></div>
+            @if (Model.PopularCourses.Count == 0)
+            {
+                <p class="text-sm text-slate-500 py-3">Chưa có khóa học.</p>
+            }
+            @foreach (var c in Model.PopularCourses)
+            {
+                <a asp-area="" asp-controller="Courses" asp-action="Details" asp-route-id="@c.Id" class="mega-course">
+                    @if (!string.IsNullOrEmpty(c.ThumbnailUrl))
+                    {
+                        <img src="@c.ThumbnailUrl" alt="" />
+                    }
+                    else
+                    {
+                        <span class="mega-course-thumb"><i data-lucide="graduation-cap" class="w-5 h-5"></i></span>
+                    }
+                    <span class="min-w-0">
+                        <strong>@c.Title</strong>
+                        <small><span class="text-amber-400">★</span> @(c.AvgRating > 0 ? c.AvgRating.ToString("0.0") : "Mới") · @UiText.Price(c.CurrentPrice)</small>
+                    </span>
+                </a>
+            }
+        </div>
+    </div>
+</div>
+

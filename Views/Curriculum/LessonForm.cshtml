@@ -1,0 +1,341 @@
+﻿@model LessonFormViewModel
+@{
+    var inAdmin = ViewContext.RouteData.Values["area"]?.ToString() == "Admin";
+    if (inAdmin) Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+    var isEdit = Model.Id != null;
+    ViewData["Title"] = isEdit ? "Sửa bài học" : "Thêm bài học";
+    var course = (Course)ViewBag.Course;
+    string LessonIcon(string type) => type == LessonType.Video ? "play-circle" : type == LessonType.Quiz ? "list-checks" : "file-text";
+    var currentSection = course.Sections.FirstOrDefault(s => s.Id == Model.SectionId);
+    // Bài kiểm tra đã lưu: soạn câu hỏi bằng AJAX. Chưa lưu: soạn nháp, lưu cùng bài học (DraftQuestionsJson)
+    var quizLesson = isEdit ? course.Sections.SelectMany(s => s.Lessons).FirstOrDefault(l => l.Id == Model.Id && l.LessonType == LessonType.Quiz) : null;
+    var types = new (string Value, string Label, string Icon, string Hint)[]
+    {
+        (LessonType.Video, "Video", "play-circle", "YouTube hoặc tải file lên"),
+        (LessonType.Article, "Bài viết", "file-text", "Soạn nội dung văn bản"),
+        (LessonType.Quiz, "Bài kiểm tra", "list-checks", "Câu hỏi trắc nghiệm")
+    };
+    string FileIcon(string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" or ".docx" or ".txt" => "file-text",
+            ".zip" or ".rar" => "file-archive",
+            ".pptx" => "presentation",
+            _ => "file"
+        };
+    }
+}
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet" />
+}
+
+<a asp-action="Index" asp-route-id="@Model.CourseId" class="studio-back"><i data-lucide="arrow-left"></i>Nội dung khóa học</a>
+
+<div class="studio-page-head">
+    <div class="min-w-0">
+        <span class="eyebrow">@(isEdit ? "CHỈNH SỬA" : "BÀI HỌC MỚI")@(currentSection != null ? " · " + currentSection.Title.ToUpper() : "")</span>
+        <h1>@(isEdit ? Model.Title : ViewData["Title"])</h1>
+        <p class="muted">@course.Title</p>
+    </div>
+</div>
+
+<div class="lesson-layout">
+<!-- ===== CỘT TRÁI: mục lục khóa học ===== -->
+<aside class="lesson-outline">
+    <div class="panel lesson-outline-card">
+        <div class="lesson-outline-head">
+            <span class="studio-card-title !mb-0"><span><i data-lucide="list-tree"></i></span>Mục lục</span>
+            <small class="muted">@course.Sections.Count chương · @course.Sections.Sum(s => s.Lessons.Count) bài</small>
+        </div>
+        <nav class="lesson-outline-nav" aria-label="Mục lục khóa học">
+            @{ var no = 0; }
+            @foreach (var chap in course.Sections)
+            {
+                no++;
+                var open = chap.Id == Model.SectionId;
+                <details class="lesson-outline-section" open="@open">
+                    <summary>
+                        <span class="lesson-outline-no">@no</span>
+                        <span class="lesson-outline-title">@chap.Title</span>
+                        <i data-lucide="chevron-down" class="lesson-outline-caret"></i>
+                    </summary>
+                    <ul>
+                        @foreach (var l in chap.Lessons)
+                        {
+                            var active = l.Id == Model.Id;
+                            <li>
+                                <a asp-action="EditLesson" asp-route-id="@course.Id" asp-route-lessonId="@l.Id" class="@(active ? "is-active" : "")" aria-current="@(active ? "page" : null)">
+                                    <i data-lucide="@LessonIcon(l.LessonType)"></i>
+                                    <span>@l.Title</span>
+                                    @if (l.DurationSec > 0) { <small>@UiText.Duration(l.DurationSec)</small> }
+                                </a>
+                            </li>
+                        }
+                        @if (!isEdit && open)
+                        {
+                            <li><span class="lesson-outline-new"><i data-lucide="sparkles"></i><span>Bài học mới (đang soạn)</span></span></li>
+                        }
+                        <li>
+                            <a asp-action="AddLesson" asp-route-id="@course.Id" asp-route-sectionId="@chap.Id" class="lesson-outline-add"><i data-lucide="plus"></i><span>Thêm bài vào chương</span></a>
+                        </li>
+                    </ul>
+                </details>
+            }
+        </nav>
+        <a asp-action="Index" asp-route-id="@course.Id" class="lesson-outline-manage"><i data-lucide="settings-2"></i>Quản lý chương &amp; thứ tự</a>
+    </div>
+
+    <div class="panel lesson-outline-tips">
+        <b><i data-lucide="lightbulb"></i>Mẹo</b>
+        <ul>
+            <li>Bài video tự lấy thời lượng khi chọn video.</li>
+            <li>Bật <b>Học thử</b> cho 1–2 bài đầu để thu hút học viên.</li>
+            <li>Ảnh, video dùng chung để trong <a asp-area="" asp-controller="Media" asp-action="Index" target="_blank">Thư viện media</a>.</li>
+        </ul>
+    </div>
+</aside>
+
+<!-- ===== CỘT PHẢI: nội dung bài học ===== -->
+<div class="lesson-main">
+<form asp-action="SaveLesson" method="post" enctype="multipart/form-data" id="lessonForm" class="studio-lesson-form">
+    <div asp-validation-summary="ModelOnly" class="validation"></div>
+    @* Ghi giá trị trực tiếp, KHÔNG dùng asp-for: URL /AddLesson/{id} có tham số "id" là id KHÓA HỌC,
+       asp-for="Id" sẽ lấy nhầm giá trị đó từ ModelState làm id BÀI HỌC -> ghi đè lên bài học khác. *@
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <input type="hidden" name="CourseId" value="@Model.CourseId" />
+    <input type="hidden" name="SectionId" value="@Model.SectionId" />
+    @if (quizLesson == null)
+    {
+        @* Câu hỏi soạn trước khi bài kiểm tra được lưu (quiz-builder.js điền JSON vào đây) *@
+        <input type="hidden" name="DraftQuestionsJson" value="@Model.DraftQuestionsJson" data-quiz-drafts />
+    }
+
+    <section class="panel studio-form-card">
+        <h2 class="studio-card-title"><span><i data-lucide="book-open"></i></span>Thông tin bài học</h2>
+        <label asp-for="Title"></label>
+        <input asp-for="Title" placeholder="Ví dụ: Cài đặt môi trường lập trình" />
+        <span asp-validation-for="Title" class="validation"></span>
+
+        <label>@Html.DisplayNameFor(m => m.LessonType)</label>
+        <div class="studio-type-picker" role="radiogroup">
+            @foreach (var t in types)
+            {
+                <label class="studio-type-option">
+                    <input type="radio" name="LessonType" value="@t.Value" checked="@(Model.LessonType == t.Value)" />
+                    <span class="studio-type-icon"><i data-lucide="@t.Icon"></i></span>
+                    <span><b>@t.Label</b><small>@t.Hint</small></span>
+                </label>
+            }
+        </div>
+    </section>
+
+    <!-- Phần dành cho bài VIDEO -->
+    <section class="panel studio-form-card" data-type="video">
+        <h2 class="studio-card-title"><span><i data-lucide="clapperboard"></i></span>Video bài giảng</h2>
+
+        <!-- Khung xem trước: hiện ngay khi nhập link, chọn từ thư viện hoặc chọn file -->
+        <div class="lesson-video" data-video-box data-lesson-id="@Model.Id">
+            <div class="lesson-video-stage" data-video-stage>
+                <div class="lesson-video-empty" data-video-empty>
+                    <i data-lucide="clapperboard"></i>
+                    <strong>Chưa có video</strong>
+                    <span>Dán link YouTube / .mp4, chọn từ thư viện hoặc tải file lên.</span>
+                </div>
+            </div>
+            <div class="lesson-video-info">
+                <span class="lesson-video-source" data-video-source><i data-lucide="film"></i><span>—</span></span>
+                <span class="lesson-video-duration" data-video-duration hidden><i data-lucide="clock-3"></i><span></span></span>
+            </div>
+        </div>
+
+        <label asp-for="VideoUrl"></label>
+        <div class="studio-input-action">
+            <input asp-for="VideoUrl" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+            <button type="button" class="button secondary" data-media-pick="video" data-media-target="#videoUrl"><i data-lucide="film" class="w-4 h-4"></i>Chọn từ thư viện</button>
+        </div>
+
+        <label>@Html.DisplayNameFor(m => m.VideoFile)</label>
+        <div class="studio-input-action">
+            <label class="studio-file !mt-0 flex-1">
+                <i data-lucide="upload"></i><span data-file-name>Chọn file video từ máy</span>
+                <input asp-for="VideoFile" type="file" accept=".mp4,.webm" id="videoFile" />
+            </label>
+            <button type="button" class="button secondary" data-video-clear-file hidden><i data-lucide="x" class="w-4 h-4"></i>Bỏ file</button>
+        </div>
+        <span asp-validation-for="VideoFile" class="validation"></span>
+
+        <label for="durationText">@Html.DisplayNameFor(m => m.DurationSeconds)</label>
+        <div class="lesson-duration">
+            <input id="durationText" inputmode="numeric" placeholder="mm:ss" autocomplete="off" />
+            <input type="hidden" asp-for="DurationSeconds" id="durationSeconds" />
+            <span class="lesson-duration-hint" data-duration-hint>Tự lấy khi chọn video. Có thể sửa tay, dạng phút:giây (vd 12:30).</span>
+        </div>
+        <span asp-validation-for="DurationSeconds" class="validation"></span>
+    </section>
+
+    <!-- Phần dành cho BÀI VIẾT -->
+    <section class="panel studio-form-card" data-type="article">
+        <h2 class="studio-card-title"><span><i data-lucide="pen-line"></i></span>@Html.DisplayNameFor(m => m.Content)</h2>
+        <p class="hint !mt-2">Dùng nút <b>Thư viện</b> trên thanh công cụ để chèn ảnh / video. Dán hoặc kéo ảnh vào là tự tải lên thư viện.</p>
+        <textarea asp-for="Content" id="articleEditor"></textarea>
+    </section>
+
+    <!-- Phần dành cho QUIZ -->
+    <section class="panel studio-form-card" data-type="quiz">
+        <h2 class="studio-card-title"><span><i data-lucide="target"></i></span>Cài đặt bài kiểm tra</h2>
+        <label asp-for="PassScore"></label>
+        <div class="studio-input-suffix studio-short"><input asp-for="PassScore" type="number" min="0" max="100" /><span>%</span></div>
+        <p class="hint !mb-0">Học viên phải đạt điểm này mới học được bài tiếp theo. Soạn câu hỏi ở khung <b>Câu hỏi bài kiểm tra</b> bên dưới.</p>
+    </section>
+
+    <section class="panel studio-form-card">
+        <h2 class="studio-card-title"><span><i data-lucide="paperclip"></i></span>Tài liệu đính kèm</h2>
+        @if (Model.CurrentResources.Count > 0)
+        {
+            <ul class="studio-resources">
+                @foreach (var r in Model.CurrentResources)
+                {
+                    <li>
+                        <span class="studio-resource-icon"><i data-lucide="@FileIcon(r.FileName)"></i></span>
+                        <a asp-area="" asp-controller="MediaStream" asp-action="Resource" asp-route-id="@r.Id">@r.FileName</a>
+                        <span class="muted text-xs">@(r.FileSize / 1024) KB</span>
+                        <button class="icon-btn danger" form="deleteResource-@r.Id" data-tip="Xóa tài liệu" aria-label="Xóa tài liệu"><i data-lucide="trash-2"></i></button>
+                    </li>
+                }
+            </ul>
+        }
+        <label>@Html.DisplayNameFor(m => m.ResourceFiles)</label>
+        <label class="studio-file">
+            <i data-lucide="upload"></i><span data-file-name>Chọn tài liệu (.pdf, .zip, .docx, .pptx…)</span>
+            <input asp-for="ResourceFiles" type="file" multiple accept=".pdf,.zip,.rar,.docx,.pptx,.txt" />
+        </label>
+        <span asp-validation-for="ResourceFiles" class="validation"></span>
+
+        <label class="studio-switch">
+            <input asp-for="IsFreePreview" />
+            <span class="studio-switch-track" aria-hidden="true"></span>
+            <span><b>Cho phép học thử miễn phí</b><small>Học viên chưa mua vẫn xem được bài này.</small></span>
+        </label>
+    </section>
+</form>
+
+<!-- ===== SOẠN CÂU HỎI (nằm ngoài form chính, lưu bằng AJAX) ===== -->
+<section class="panel studio-form-card quiz-builder" data-type-panel="quiz">
+    <h2 class="studio-card-title"><span><i data-lucide="message-circle-question"></i></span>Câu hỏi bài kiểm tra</h2>
+    @if (quizLesson == null)
+    {
+        <div class="quiz-locked">
+            <i data-lucide="info"></i>
+            <div>
+                <strong>Câu hỏi sẽ được lưu cùng bài học</strong>
+                <span>Soạn câu hỏi ngay bên dưới, rồi bấm <b>Lưu bài học</b> để lưu tất cả.</span>
+            </div>
+        </div>
+    }
+        <form asp-action="SaveQuestion" asp-route-id="@Model.CourseId" method="post" class="quiz-editor" data-quiz-editor
+              data-base="@Url.Action("Questions", new { id = Model.CourseId })" data-lesson="@quizLesson?.Id"
+              data-draft="@(quizLesson == null ? "true" : null)">
+            <input type="hidden" name="Id" />
+            <input type="hidden" name="LessonId" value="@quizLesson?.Id" />
+
+            <div class="quiz-editor-head">
+                <strong data-quiz-editor-title><i data-lucide="plus-circle"></i>Thêm câu hỏi mới</strong>
+                <div class="quiz-type-switch" role="radiogroup" aria-label="Loại câu hỏi">
+                    <label><input type="radio" name="QuestionType" value="single" checked /><span><i data-lucide="circle-dot"></i>Trắc nghiệm</span></label>
+                    <label><input type="radio" name="QuestionType" value="fill" /><span><i data-lucide="text-cursor-input"></i>Điền khuyết</span></label>
+                </div>
+            </div>
+
+            <label for="quizText" class="!mt-3">Nội dung câu hỏi</label>
+            <textarea id="quizText" name="QuestionText" rows="3" maxlength="2000" required placeholder="Ví dụ: Từ khóa nào dùng để khai báo hằng số trong C#?"></textarea>
+
+            <div class="quiz-options-head">
+                <label class="!m-0" data-options-label>Các lựa chọn <small class="muted">— chọn ô tròn ở đáp án đúng</small></label>
+                <span class="muted text-xs" data-options-count></span>
+            </div>
+            <div class="quiz-option-rows" data-options></div>
+            <button type="button" class="quiz-add-option" data-add-option><i data-lucide="plus"></i><span>Thêm lựa chọn</span></button>
+
+            <p class="quiz-error" data-quiz-error role="alert" hidden></p>
+
+            <div class="quiz-editor-actions">
+                <span class="muted text-xs"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> để lưu nhanh</span>
+                <button type="button" class="button secondary small" data-quiz-cancel hidden>Hủy sửa</button>
+                <button class="button small" data-quiz-submit><i data-lucide="@(quizLesson == null ? "plus" : "save")"></i><span>@(quizLesson == null ? "Thêm câu hỏi" : "Lưu câu hỏi")</span></button>
+            </div>
+        </form>
+
+        <div class="quiz-list-wrap" data-quiz-container>
+            @if (quizLesson != null)
+            {
+                <partial name="~/Views/Curriculum/_QuizQuestions.cshtml" model="quizLesson" />
+            }
+        </div>
+</section>
+
+@* Thanh lưu đặt SAU khung câu hỏi; nút Lưu gắn với form bài học qua thuộc tính form="lessonForm" *@
+<div class="panel studio-form-actions studio-sticky-actions lesson-save-bar">
+    <a class="button secondary" asp-action="Index" asp-route-id="@Model.CourseId">Hủy</a>
+    <button type="submit" form="lessonForm" class="button"><i data-lucide="save" class="w-4 h-4"></i>Lưu bài học</button>
+</div>
+
+@if (isEdit)
+{
+    <!-- Các form xóa nằm ngoài form chính -->
+    @foreach (var r in Model.CurrentResources)
+    {
+        <form id="deleteResource-@r.Id" asp-action="DeleteResource" asp-route-id="@Model.CourseId" asp-route-lessonId="@Model.Id" asp-route-resourceId="@r.Id" method="post" data-confirm="Xóa tài liệu này?"></form>
+    }
+    <section class="panel studio-danger-zone">
+        <div>
+            <h2>Xóa bài học</h2>
+            <p class="muted">Bài học và tài liệu đính kèm sẽ bị xóa vĩnh viễn.</p>
+        </div>
+        <form asp-action="DeleteLesson" asp-route-id="@Model.CourseId" method="post" data-confirm="Xóa bài học này?">
+            <input type="hidden" name="lessonId" value="@Model.Id" />
+            <button class="button danger"><i data-lucide="trash-2" class="w-4 h-4"></i>Xóa bài học</button>
+        </form>
+    </section>
+}
+</div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/lang/summernote-vi-VN.min.js"></script>
+    <script src="~/js/media-picker.js" asp-append-version="true"></script>
+    <script src="~/js/lesson-video.js" asp-append-version="true"></script>
+    <script src="~/js/quiz-builder.js" asp-append-version="true"></script>
+    <script>
+        // Trình soạn thảo bài viết (Summernote) + nút chèn từ thư viện media
+        $('#articleEditor').summernote(MediaPicker.editorOptions({ height: 360 }));
+
+        // Chỉ hiện phần nhập đúng với loại bài đang chọn
+        var form = document.getElementById('lessonForm');
+        function showLessonType() {
+            var checked = form.querySelector('input[name="LessonType"]:checked');
+            var type = checked ? checked.value : 'video';
+            form.querySelectorAll('[data-type]').forEach(function (box) {
+                box.hidden = box.dataset.type !== type;
+            });
+            document.querySelectorAll('[data-type-panel]').forEach(function (box) {
+                box.hidden = box.dataset.typePanel !== type;
+            });
+        }
+        form.querySelectorAll('input[name="LessonType"]').forEach(function (r) { r.addEventListener('change', showLessonType); });
+        showLessonType();
+
+        // Hiện tên file đã chọn
+        form.querySelectorAll('.studio-file input[type=file]').forEach(function (input) {
+            var label = input.closest('.studio-file').querySelector('[data-file-name]');
+            var initial = label.textContent;
+            input.addEventListener('change', function () {
+                var n = input.files.length;
+                label.textContent = n === 0 ? initial : n === 1 ? input.files[0].name : n + ' file đã chọn';
+            });
+        });
+    </script>
+}

@@ -1,0 +1,8 @@
+@model RegisterViewModel
+@{ ViewData["Title"] = "Đăng ký"; }
+
+<h2 class="auth-title">Tạo tài khoản mới</h2>
+<p class="auth-subtitle">Đăng ký miễn phí để bắt đầu học. Khi sẵn sàng, bạn có thể gửi hồ sơ làm giảng viên.</p>
+
+<partial name="_GoogleButton" />
+<partial name="_RegisterForm" model="Model" />

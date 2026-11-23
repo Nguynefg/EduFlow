@@ -1,0 +1,26 @@
+﻿@{
+    var c = ViewContext.RouteData.Values["controller"]?.ToString();
+    var a = ViewContext.RouteData.Values["action"]?.ToString();
+}
+<nav class="portal-tabs flex gap-2 text-xs font-bold flex-wrap" aria-label="Tài khoản">
+    <a class="@(c == "Dashboard" && a == "Student" ? "active" : "")" asp-controller="Dashboard" asp-action="Student">Tổng quan học tập</a>
+    <a class="@(c == "Learning" ? "active" : "")" asp-controller="Learning" asp-action="Index"><i data-lucide="library-big" class="w-4 h-4"></i>Khóa học đã mua</a>
+    <a asp-controller="Cart" asp-action="Index">Giỏ hàng</a>
+    <a asp-controller="Orders" asp-action="Index">Đơn hàng</a>
+    @if (User.IsInRole(AppRoles.Instructor))
+    {
+        <a class="@(c == "Dashboard" && a == "Instructor" ? "active" : "")" asp-controller="Dashboard" asp-action="Instructor">Tổng quan giảng viên</a>
+        <a class="@(c == "Community" ? "active" : "")" asp-controller="Community" asp-action="Manage">Hỏi đáp</a>
+        <a class="@(c == "Finance" && a == "Revenue" ? "active" : "")" asp-controller="Finance" asp-action="Revenue"><i data-lucide="chart-no-axes-combined" class="w-4 h-4"></i>Doanh thu</a>
+        <a class="@(c == "Finance" && a == "Index" ? "active" : "")" asp-controller="Finance" asp-action="Index">Rút tiền</a>
+        <a class="@(c is "Instructor" or "Curriculum" ? "active" : "")" asp-controller="Instructor" asp-action="Index"><i data-lucide="book-marked" class="w-4 h-4"></i>Khóa học tôi dạy</a>
+        <a class="@(c == "Media" ? "active" : "")" asp-controller="Media" asp-action="Index"><i data-lucide="images" class="w-4 h-4"></i>Thư viện media</a>
+    }
+    @if(Context.RequestServices.GetRequiredService<EduFlow.Web.Helpers.EmailSender>().IsSimulation){<a asp-controller="Mailbox" asp-action="Index">Hộp thư mô phỏng</a>}
+    <a class="@(c == "Profile" && a == "Index" ? "active" : "")" asp-controller="Profile" asp-action="Index"><i data-lucide="user-round" class="w-4 h-4"></i>Hồ sơ cá nhân</a>
+    <a class="@(a == "ChangePassword" ? "active" : "")" asp-controller="Profile" asp-action="ChangePassword"><i data-lucide="lock-keyhole" class="w-4 h-4"></i>Đổi mật khẩu</a>
+    @if (!User.IsInRole(AppRoles.Instructor))
+    {
+        <a class="@(c == "Kyc" ? "active" : "")" asp-controller="Kyc" asp-action="Index"><i data-lucide="user-check" class="w-4 h-4"></i>Đăng ký giảng viên</a>
+    }
+</nav>

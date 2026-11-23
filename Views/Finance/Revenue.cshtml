@@ -1,0 +1,66 @@
+﻿@model EduFlow.Web.Models.ViewModels.RevenueViewModel
+@{
+    ViewData["Title"] = Model.IsAdmin ? "Doanh thu nền tảng" : "Doanh thu giảng viên";
+    if (Model.IsAdmin) { Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml"; }
+    string Money(decimal value) => UiText.Money(value);
+    var monthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+}
+@section Styles { <link rel="stylesheet" href="~/css/revenue.css" asp-append-version="true" /> }
+<div class="revenue-page">
+    <header class="rv-heading">
+        <div><span class="eyebrow">@(Model.IsAdmin ? "TÀI CHÍNH NỀN TẢNG" : "STUDIO GIẢNG VIÊN")</span><h1>@ViewData["Title"]</h1><p>Theo dõi thu nhập từ khóa học và quản lý các khoản chi trả.</p></div>
+        <span class="rv-mode"><i data-lucide="@(Model.IsTest ? "flask-conical" : "shield-check")" aria-hidden="true"></i>@(Model.IsTest ? "Đang mô phỏng" : "Giao dịch thật")</span>
+    </header>
+
+    <section class="rv-card rv-period" aria-label="Bộ lọc doanh thu">
+        <div class="rv-period-top"><div><strong>Báo cáo doanh thu</strong><span>@Model.From.ToString("dd/MM/yyyy") – @Model.To.ToString("dd/MM/yyyy")</span></div>
+            <div class="rv-shortcuts"><a asp-action="Revenue" asp-route-from="@DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd")" asp-route-to="@DateTime.Today.ToString("yyyy-MM-dd")" asp-route-isTest="@Model.IsTest">7 ngày gần đây</a><a asp-action="Revenue" asp-route-from="@monthStart.ToString("yyyy-MM-dd")" asp-route-to="@DateTime.Today.ToString("yyyy-MM-dd")" asp-route-isTest="@Model.IsTest">Tháng này</a></div>
+        </div>
+        <form asp-action="Revenue" method="get" class="rv-filter">
+            <div><label for="from">Từ ngày</label><input id="from" name="from" type="date" value="@Model.From.ToString("yyyy-MM-dd")" required /></div>
+            <div><label for="to">Đến ngày</label><input id="to" name="to" type="date" value="@Model.To.ToString("yyyy-MM-dd")" required /></div>
+            @if(Model.SimulationEnabled){<input type="hidden" name="isTest" value="true" />}
+            else {<div><label for="isTest">Loại giao dịch</label><select id="isTest" name="isTest"><option value="false" selected="@(!Model.IsTest)">Tiền thật</option><option value="true" selected="@Model.IsTest">Thử nghiệm</option></select></div>}
+            <button class="button" type="submit"><i data-lucide="list-filter" aria-hidden="true"></i>Áp dụng</button>
+        </form>
+        <p class="rv-helper">Lọc theo ngày tạo đơn, chỉ tính đơn đã thanh toán thành công.</p>
+    </section>
+
+    <div class="rv-metrics" aria-label="Tổng quan trong kỳ báo cáo">
+        <section class="rv-card rv-metric"><span class="rv-icon"><i data-lucide="wallet" aria-hidden="true"></i></span><p>Tiền bán khóa học</p><strong>@Money(Model.Revenue)</strong><small>Sau giảm giá · @Model.Sales lượt mua</small></section>
+        <section class="rv-card rv-metric rv-metric-income"><span class="rv-icon"><i data-lucide="hand-coins" aria-hidden="true"></i></span><p>Giảng viên được hưởng</p><strong>@Money(Model.InstructorIncome)</strong><small>Trong kỳ · trước khấu trừ thuế</small></section>
+        <section class="rv-card rv-metric"><span class="rv-icon rv-icon-purple"><i data-lucide="building-2" aria-hidden="true"></i></span><p>Phần nền tảng giữ</p><strong>@Money(Model.PlatformIncome)</strong><small>@(Model.Revenue > 0 ? $"{Model.PlatformPercent:0.##}% doanh thu trong kỳ" : "Chưa phát sinh doanh thu")</small></section>
+    </div>
+
+    <div class="rv-content">
+        <div class="rv-main">
+            <section class="rv-card rv-courses">
+                <div class="rv-section-title"><div><h2>Doanh thu theo khóa học</h2><p>Chi tiết phân chia trong khoảng ngày đã chọn.</p></div><span class="rv-count">@Model.Courses.Count khóa học</span></div>
+                @if(Model.Courses.Count==0){<div class="rv-empty"><span class="rv-icon"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i></span><h3>Chưa có doanh thu trong kỳ này</h3><p>Thử chọn khoảng ngày khác. Đơn đang chờ thanh toán chưa được tính vào doanh thu.</p></div>}
+                else {
+                <div class="rv-table" tabindex="0" role="region" aria-label="Chi tiết doanh thu khóa học, có thể cuộn ngang"><table><caption class="rv-sr-only">Doanh thu theo khóa học từ @Model.From.ToString("dd/MM/yyyy") đến @Model.To.ToString("dd/MM/yyyy")</caption><thead><tr><th scope="col">Khóa học</th><th scope="col">Lượt mua</th><th scope="col">Tiền bán</th><th scope="col">Giảng viên hưởng</th><th scope="col">Nền tảng</th></tr></thead><tbody>
+                @foreach(var row in Model.Courses){<tr><td><strong>@row.Title</strong>@if(Model.IsAdmin){<small>@row.Instructor</small>}</td><td>@row.Sales</td><td>@Money(row.Revenue)</td><td class="rv-earning">@Money(row.InstructorIncome)</td><td>@Money(row.PlatformIncome)</td></tr>}
+                </tbody><tfoot><tr><th scope="row">Tổng cộng</th><td>@Model.Sales</td><td>@Money(Model.Revenue)</td><td class="rv-earning">@Money(Model.InstructorIncome)</td><td>@Money(Model.PlatformIncome)</td></tr></tfoot></table></div>
+                }
+            </section>
+
+        </div>
+
+        <aside class="rv-sidebar" aria-label="Số dư và chi trả toàn thời gian">
+            <section class="rv-card rv-wallet">
+                <div class="rv-section-title"><h2>@(Model.IsAdmin ? "Tình hình chi trả" : "Ví thu nhập")</h2><i data-lucide="landmark" aria-hidden="true"></i></div>
+                <p class="rv-helper">Toàn thời gian · @(Model.IsTest ? "sổ mô phỏng" : "sổ tiền thật")</p>
+                @if(!Model.IsAdmin){<div class="rv-available"><span>Số dư có thể rút</span><strong>@Money(Model.WithdrawableBalance)</strong><small>Số dư trước thuế</small></div>}
+                <a class="button rv-withdraw" asp-action="Index"><i data-lucide="arrow-up-right" aria-hidden="true"></i>@(Model.IsAdmin ? "Quản lý chi trả" : "Yêu cầu rút tiền")</a>
+                <dl class="rv-money-list"><div><dt>Đang chờ xử lý</dt><dd>@Money(Model.HeldAmount)</dd></div><div><dt>Đã chi trước thuế</dt><dd>@Money(Model.PaidAmount)</dd></div><div><dt>Đã chuyển thực nhận</dt><dd>@Money(Model.NetPaid)</dd></div></dl>
+                <p class="rv-helper">Các số dư này không thay đổi theo bộ lọc ngày.</p>
+            </section>
+            <section class="rv-card rv-tax"><div class="rv-section-title"><h2>Thuế TNCN</h2><i data-lucide="receipt-text" aria-hidden="true"></i></div><p class="rv-helper">Theo các khoản đã chi · toàn thời gian</p>
+                <dl class="rv-money-list"><div><dt>Đã khấu trừ</dt><dd>@Money(Model.WithheldTax)</dd></div><div><dt>Đã ghi nhận nộp</dt><dd>@Money(Model.RemittedTax)</dd></div><div><dt>Chưa ghi nhận nộp</dt><dd>@Money(Math.Max(0,Model.WithheldTax-Model.RemittedTax))</dd></div></dl>
+                <p class="rv-helper">Thuế giữ lại không cộng vào phần nền tảng hưởng. Khoản cũ thiếu hồ sơ thuế chưa được tính vào thuế và thực nhận.</p>
+                @if(Model.IsAdmin){<a class="rv-text-link" asp-action="TaxReport">Xem sổ thuế<i data-lucide="arrow-right" aria-hidden="true"></i></a>}
+            </section>
+            @if(Model.IsTest){<div class="rv-simulation"><i data-lucide="info" aria-hidden="true"></i><p><strong>Chế độ mô phỏng</strong>Doanh thu, rút tiền và thuế được thực hành trong hệ thống. Không chuyển hoặc trừ tiền thật.</p></div>}
+        </aside>
+    </div>
+</div>

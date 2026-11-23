@@ -1,0 +1,45 @@
+/* Trang đăng ký giảng viên */
+.instructor-application { --ky-bg: #fff; --ky-text: #16243d; --ky-muted: #64748b; --ky-line: #dfe6f1; --ky-soft: #f2f6ff; color: var(--ky-text); }
+html.dark .instructor-application { --ky-bg: #111827; --ky-text: #f1f5f9; --ky-muted: #b1bfd2; --ky-line: #31405a; --ky-soft: #1c2a43; }
+.instructor-application * { box-sizing: border-box; }
+.ky-heading { margin-bottom: 28px; }
+.ky-heading h1 { font-size: clamp(28px, 3vw, 36px); line-height: 1.3; margin: 8px 0 12px; }
+.instructor-application p { color: var(--ky-muted); line-height: 1.7; font-size: 15px; margin: 0; }
+.ky-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.ky-card { background: var(--ky-bg); border: 1px solid var(--ky-line); border-radius: 22px; padding: 30px; min-width: 0; }
+.instructor-application h2 { font-size: 22px; line-height: 1.4; margin: 0 0 10px; }
+.ky-card-heading { margin-bottom: 26px; }
+.ky-section { display: flex; flex-direction: column; }
+.ky-section + .ky-section { border-top: 1px solid var(--ky-line); margin-top: 28px; padding-top: 28px; }
+.ky-section h3 { display: flex; align-items: center; gap: 10px; font-size: 18px; margin: 0 0 10px; }
+.instructor-application svg { width: 20px; height: 20px; flex-shrink: 0; }
+.ky-section label { font-size: 15px; font-weight: 600; margin: 20px 0 9px; }
+.ky-section input { width: 100%; min-height: 50px; font-size: 16px; padding: 12px 14px; margin: 0; border: 1px solid var(--ky-line); border-radius: 11px; background: var(--ky-bg); color: var(--ky-text); }
+.ky-section input::placeholder { color: var(--ky-muted); opacity: 1; }
+.ky-section .validation { font-size: 13px; margin-top: 5px; }
+.ky-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--ky-line); }
+.ky-actions .button, .ky-approved .button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; font-size: 15px; padding: 12px 20px; white-space: nowrap; }
+.ky-actions span { color: var(--ky-muted); font-size: 13px; line-height: 1.6; }
+.ky-guide { background: var(--ky-soft); }
+.ky-guide-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: var(--ky-bg); border-radius: 14px; color: #365ce0; margin-bottom: 18px; }
+.ky-guide h2 { font-size: 21px; }
+.ky-guide ol { margin: 24px 0; padding-left: 22px; }
+.ky-guide li { padding-left: 5px; margin-bottom: 22px; font-size: 15px; }
+.ky-guide li:last-child { margin-bottom: 0; }
+.ky-guide li::marker { color: #4264df; font-weight: 700; }
+.ky-guide li p { margin-top: 7px; font-size: 14px; }
+.ky-guide-note { display: flex; align-items: start; gap: 10px; padding-top: 20px; border-top: 1px solid var(--ky-line); }
+.ky-guide-note p { font-size: 14px; }
+.ky-status { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.ky-status .notice, .ky-status-note { width: 100%; }
+.ky-details { margin: 24px 0 0; }
+.ky-details > div { padding: 15px 0; border-bottom: 1px solid var(--ky-line); }
+.ky-details > div:last-child { border: 0; }
+.ky-details dt { font-size: 14px; color: var(--ky-muted); margin-bottom: 7px; }
+.ky-details dd { margin: 0; font-size: 16px; font-weight: 500; overflow-wrap: anywhere; }
+.ky-approved { text-align: center; padding: 44px 24px; }
+.ky-approved > svg { width: 48px; height: 48px; color: #148064; margin: 0 auto 18px; }
+.ky-approved .button { margin-top: 24px; }
+.instructor-application :focus-visible { outline: 2px solid #4264df; outline-offset: 3px; }
+@media (max-width: 900px) { .ky-layout { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .ky-card { padding: 22px 18px; border-radius: 18px; } .ky-heading h1 { font-size: 28px; } .ky-actions .button { width: 100%; } .instructor-application p, .ky-guide li p, .ky-guide-note p { font-size: 16px; } }

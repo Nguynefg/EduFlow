@@ -1,0 +1,130 @@
+﻿@model List<Course>
+@{
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    ViewData["Title"] = isAdmin ? "Quản lý khóa học" : "Studio giảng viên";
+    int Count(string status) => Model.Count(c => c.Status == status);
+    var stats = new (string Label, int Value, string Icon, string Tone)[]
+    {
+        ("Tổng khóa học", Model.Count, "library", "blue"),
+        ("Đang công khai", Count(CourseStatus.Published), "globe", "green"),
+        ("Chờ duyệt", Count(CourseStatus.Pending), "hourglass", "amber"),
+        ("Bản nháp / Bị từ chối", Count(CourseStatus.Draft) + Count(CourseStatus.Rejected), "file-pen-line", "slate")
+    };
+    string StatusIcon(string s) => s switch
+    {
+        CourseStatus.Published => "globe",
+        CourseStatus.Pending => "hourglass",
+        CourseStatus.Rejected => "circle-x",
+        CourseStatus.Hidden => "eye-off",
+        _ => "file-pen-line"
+    };
+}
+
+<section class="course-workspace">
+    <header class="workspace-banner studio-banner">
+        <div>
+            <span class="eyebrow">@(isAdmin ? "QUẢN TRỊ KHÓA HỌC" : "STUDIO GIẢNG VIÊN")</span>
+            <h1>@(isAdmin ? "Tất cả khóa học" : "Khóa học của bạn")</h1>
+            <p>Tạo khóa học, thêm chương bài và gửi quản trị viên duyệt trước khi xuất bản.</p>
+        </div>
+        <a class="button" asp-action="Create"><i data-lucide="plus"></i> Tạo khóa học</a>
+    </header>
+
+    <div class="studio-stats">
+        @foreach (var s in stats)
+        {
+            <div class="studio-stat tone-@s.Tone">
+                <span class="studio-stat-icon"><i data-lucide="@s.Icon"></i></span>
+                <div><strong>@s.Value</strong><small>@s.Label</small></div>
+            </div>
+        }
+    </div>
+
+    <div class="workspace-heading">
+        <h2>Danh sách khóa học</h2>
+        <span class="muted text-sm">Bấm <b>Nội dung</b> để thêm chương và bài học.</span>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="panel studio-empty">
+            <span class="studio-empty-icon"><i data-lucide="sparkles"></i></span>
+            <h3>Bắt đầu với khóa học đầu tiên</h3>
+            <p class="muted">Tạo bản nháp, thêm nội dung rồi gửi duyệt khi sẵn sàng.</p>
+            <a class="button" asp-action="Create"><i data-lucide="plus" class="w-4 h-4"></i> Tạo khóa học</a>
+        </div>
+    }
+
+    <div class="workspace-grid">
+        @foreach (var course in Model)
+        {
+            var lessonCount = course.Sections.Sum(s => s.Lessons.Count);
+            <article class="panel workspace-card studio-card">
+                <div class="workspace-cover">
+                    @if (!string.IsNullOrEmpty(course.ThumbnailUrl))
+                    {
+                        <img src="@course.ThumbnailUrl" alt="" loading="lazy" />
+                    }
+                    else
+                    {
+                        <i data-lucide="book-open"></i>
+                    }
+                    <span class="badge studio-cover-badge @UiText.CourseStatusCss(course.Status)"><i data-lucide="@StatusIcon(course.Status)"></i>@UiText.CourseStatus(course.Status)</span>
+                </div>
+                <div class="workspace-card-body">
+                    <div class="studio-card-top">
+                        <span class="studio-category"><i data-lucide="tag"></i>@(course.Category?.Name ?? "Chưa có danh mục")</span>
+                        <strong class="studio-price">@UiText.Price(course.CurrentPrice)</strong>
+                    </div>
+                    <h3>@course.Title</h3>
+                    <div class="studio-card-facts">
+                        <span><i data-lucide="layers"></i>@course.Sections.Count chương</span>
+                        <span><i data-lucide="play-circle"></i>@lessonCount bài</span>
+                        <span><i data-lucide="signal"></i>@UiText.Level(course.Level)</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(course.RejectReason) && course.Status is CourseStatus.Rejected or CourseStatus.Hidden)
+                    {
+                        <div class="studio-reason"><i data-lucide="message-square-warning"></i><span><b>Lý do:</b> @course.RejectReason</span></div>
+                    }
+                </div>
+                <div class="workspace-actions studio-card-actions">
+                    <div class="studio-card-main">
+                        @if (isAdmin)
+                        {
+                            <a class="button small secondary" asp-area="Admin" asp-controller="Courses" asp-action="Details" asp-route-id="@course.Id">Quản trị</a>
+                        }
+                        <a class="button small" asp-controller="Curriculum" asp-action="Index" asp-route-id="@course.Id"><i data-lucide="list-tree"></i>Nội dung</a>
+                        <a class="button small secondary" asp-action="Edit" asp-route-id="@course.Id"><i data-lucide="pencil"></i>Sửa</a>
+                    </div>
+                    <div class="icon-actions">
+                        @if (course.Status is CourseStatus.Draft or CourseStatus.Rejected)
+                        {
+                            <form asp-action="Submit" method="post" data-confirm="Gửi khóa học này cho quản trị viên duyệt?">
+                                <input type="hidden" name="id" value="@course.Id" />
+                                <button class="icon-btn approve" data-tip="Gửi duyệt" aria-label="Gửi duyệt"><i data-lucide="send"></i></button>
+                            </form>
+                        }
+                        @if (course.Status == CourseStatus.Pending)
+                        {
+                            <form asp-action="Withdraw" method="post" data-confirm="Rút yêu cầu duyệt và đưa về bản nháp?">
+                                <input type="hidden" name="id" value="@course.Id" />
+                                <button class="icon-btn warn" data-tip="Rút yêu cầu duyệt" aria-label="Rút yêu cầu"><i data-lucide="undo-2"></i></button>
+                            </form>
+                        }
+                        @if (course.Status == CourseStatus.Published)
+                        {
+                            <a class="icon-btn view" asp-controller="Courses" asp-action="Details" asp-route-id="@course.Id" target="_blank" data-tip="Xem trang công khai" aria-label="Xem trang"><i data-lucide="square-arrow-out-up-right"></i></a>
+                        }
+                        @if (isAdmin || course.PublishedAt == null)
+                        {
+                            <form asp-action="Delete" method="post" data-confirm="Xóa khóa học này?">
+                                <input type="hidden" name="id" value="@course.Id" />
+                                <button class="icon-btn danger" data-tip="Xóa khóa học" aria-label="Xóa"><i data-lucide="trash-2"></i></button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+</section>

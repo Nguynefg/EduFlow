@@ -1,0 +1,186 @@
+﻿@model CourseFormViewModel
+@{
+    var inAdmin = ViewContext.RouteData.Values["area"]?.ToString() == "Admin";
+    if (inAdmin) Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+    var isEdit = Model.Id != null;
+    ViewData["Title"] = isEdit ? "Sửa khóa học" : "Tạo khóa học";
+    var categories = (List<Category>)ViewBag.Categories;
+    var cover = !string.IsNullOrEmpty(Model.PickedThumbnailUrl) ? Model.PickedThumbnailUrl : Model.ThumbnailUrl;
+}
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet" />
+}
+
+<a asp-action="Index" class="studio-back"><i data-lucide="arrow-left"></i>@(inAdmin ? "Quản lý khóa học" : "Studio giảng viên")</a>
+
+<div class="studio-page-head">
+    <div>
+        <span class="eyebrow">@(isEdit ? UiText.CourseStatus(Model.Status).ToUpper() : "BẢN NHÁP MỚI")</span>
+        <h1>@ViewData["Title"]</h1>
+        <p class="muted">Điền thông tin khóa học. Các mục có dấu <span class="studio-req">*</span> là bắt buộc.</p>
+    </div>
+    @if (isEdit)
+    {
+        <a class="button secondary" asp-controller="Curriculum" asp-action="Index" asp-route-id="@Model.Id"><i data-lucide="list-tree" class="w-4 h-4"></i>Nội dung khóa học</a>
+    }
+</div>
+
+@if (Model.Status == CourseStatus.Published)
+{
+    <div class="notice studio-notice"><i data-lucide="info"></i>Khóa học đang công khai. Thay đổi sẽ hiển thị ngay cho học viên.</div>
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="studio-form-grid">
+    <div class="studio-form-main">
+        <div asp-validation-summary="ModelOnly" class="validation"></div>
+
+        <section class="panel studio-form-card">
+            <h2 class="studio-card-title"><span><i data-lucide="file-text"></i></span>Thông tin chung</h2>
+            <label asp-for="Title">@Html.DisplayNameFor(m => m.Title) <span class="studio-req">*</span></label>
+            <input asp-for="Title" placeholder="Ví dụ: Lập trình C# từ cơ bản đến nâng cao" />
+            <span asp-validation-for="Title" class="validation"></span>
+
+            <div class="studio-pair">
+                <div>
+                    <label asp-for="CategoryId">@Html.DisplayNameFor(m => m.CategoryId) <span class="studio-req">*</span></label>
+                    <select asp-for="CategoryId">
+                        <option value="0">-- Chọn danh mục --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id">@(c.ParentId != null ? "— " : "")@c.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CategoryId" class="validation"></span>
+                    @if (categories.Count == 0)
+                    {
+                        <p class="hint">Chưa có danh mục nào. Nhờ quản trị viên tạo danh mục trước.</p>
+                    }
+                </div>
+                <div>
+                    <label asp-for="Level"></label>
+                    <select asp-for="Level">
+                        @foreach (var level in CourseLevel.All)
+                        {
+                            <option value="@level">@UiText.Level(level)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <label asp-for="ShortDesc"></label>
+            <input asp-for="ShortDesc" maxlength="500" placeholder="Một câu giới thiệu ngắn hiển thị trên thẻ khóa học" />
+        </section>
+
+        <section class="panel studio-form-card">
+            <h2 class="studio-card-title"><span><i data-lucide="align-left"></i></span>Mô tả và mục tiêu</h2>
+            <label asp-for="Description"></label>
+            <p class="hint !mt-0">Định dạng chữ, chèn ảnh và video từ <a asp-area="" asp-controller="Media" asp-action="Index" target="_blank">thư viện media</a>. Dán hoặc kéo ảnh vào là tự tải lên thư viện.</p>
+            <textarea asp-for="Description" id="descriptionEditor"></textarea>
+
+            <div class="studio-pair">
+                <div>
+                    <label asp-for="Objectives"></label>
+                    <textarea asp-for="Objectives" rows="5" placeholder="Hiểu cú pháp C#&#10;Viết được ứng dụng console"></textarea>
+                </div>
+                <div>
+                    <label asp-for="Requirements"></label>
+                    <textarea asp-for="Requirements" rows="5" placeholder="Có máy tính cài Visual Studio"></textarea>
+                </div>
+            </div>
+            <p class="hint !mb-0"><i data-lucide="lightbulb" class="inline w-3.5 h-3.5"></i> Mỗi dòng là một ý, sẽ hiện thành danh sách có dấu tích.</p>
+        </section>
+
+        <section class="panel studio-form-card">
+            <h2 class="studio-card-title"><span><i data-lucide="wallet"></i></span>Giá bán</h2>
+            <div class="studio-pair">
+                <div>
+                    <label asp-for="Price"></label>
+                    <div class="studio-input-suffix"><input asp-for="Price" type="number" min="0" step="1000" /><span>đ</span></div>
+                    <span asp-validation-for="Price" class="validation"></span>
+                </div>
+                <div>
+                    <label asp-for="DiscountPrice"></label>
+                    <div class="studio-input-suffix"><input asp-for="DiscountPrice" type="number" min="0" step="1000" placeholder="Bỏ trống nếu không khuyến mãi" /><span>đ</span></div>
+                    <span asp-validation-for="DiscountPrice" class="validation"></span>
+                </div>
+                <div>
+                    <label asp-for="DiscountStart"></label>
+                    <input asp-for="DiscountStart" type="datetime-local" />
+                </div>
+                <div>
+                    <label asp-for="DiscountEnd"></label>
+                    <input asp-for="DiscountEnd" type="datetime-local" />
+                </div>
+            </div>
+            <p class="hint !mb-0">Nhập giá 0 để khóa học miễn phí.</p>
+        </section>
+    </div>
+
+    <aside class="studio-form-side">
+        <section class="panel studio-form-card">
+            <h2 class="studio-card-title"><span><i data-lucide="image"></i></span>Ảnh bìa và video</h2>
+            <div class="studio-cover-preview" data-cover-preview>
+                <img src="@cover" alt="" @(string.IsNullOrEmpty(cover) ? "hidden" : "") />
+                <span @(string.IsNullOrEmpty(cover) ? "" : "hidden")><i data-lucide="image-plus"></i>Chưa có ảnh bìa</span>
+            </div>
+            <input type="hidden" asp-for="PickedThumbnailUrl" id="pickedThumbnail" />
+            <input type="hidden" asp-for="ThumbnailUrl" />
+            <button type="button" class="studio-pick" data-media-pick="image" data-media-target="#pickedThumbnail" data-cover-pick>
+                <i data-lucide="images"></i>Chọn từ thư viện media
+            </button>
+            <label asp-for="ThumbnailImage" class="studio-file">
+                <i data-lucide="upload"></i><span data-file-name>Chọn ảnh (.jpg, .png, .webp)</span>
+                <input asp-for="ThumbnailImage" type="file" accept=".jpg,.jpeg,.png,.webp" data-cover-input />
+            </label>
+            <span asp-validation-for="ThumbnailImage" class="validation"></span>
+
+            <label asp-for="TrailerUrl"></label>
+            <input asp-for="TrailerUrl" placeholder="https://www.youtube.com/watch?v=..." />
+            <span asp-validation-for="TrailerUrl" class="validation"></span>
+        </section>
+
+        <div class="panel studio-form-actions course-submit-actions">
+            <button class="button"><i data-lucide="@(isEdit ? "save" : "file-plus")" class="w-4 h-4"></i>@(isEdit ? "Lưu thay đổi" : "Tạo bản nháp")</button>
+            <a class="button secondary" asp-action="Index">Hủy</a>
+        </div>
+    </aside>
+</form>
+
+@section Scripts {
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/lang/summernote-vi-VN.min.js"></script>
+    <script src="~/js/media-picker.js" asp-append-version="true"></script>
+    <script>
+        // Trình soạn thảo cho Mô tả chi tiết
+        $('#descriptionEditor').summernote(MediaPicker.editorOptions({ height: 320, placeholder: 'Giới thiệu khóa học: nội dung chính, đối tượng phù hợp, kết quả đạt được...' }));
+
+        // Chọn ảnh bìa từ thư viện: hiện xem trước, bỏ file đang chọn (nếu có)
+        document.addEventListener('media:picked', function (e) {
+            if (!e.target.matches('[data-cover-pick]')) return;
+            var box = document.querySelector('[data-cover-preview]');
+            var img = box.querySelector('img');
+            img.src = e.detail.url; img.hidden = false;
+            box.querySelector('span').hidden = true;
+            var file = document.querySelector('[data-cover-input]');
+            file.value = '';
+            file.closest('label').querySelector('[data-file-name]').textContent = 'Đã chọn: ' + e.detail.displayName;
+        });
+
+        // Xem trước ảnh bìa ngay khi chọn file
+        document.querySelectorAll('[data-cover-input]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0];
+                var box = document.querySelector('[data-cover-preview]');
+                var name = input.closest('label').querySelector('[data-file-name]');
+                if (!file) return;
+                document.getElementById('pickedThumbnail').value = '';
+                name.textContent = file.name;
+                var img = box.querySelector('img');
+                img.src = URL.createObjectURL(file);
+                img.hidden = false;
+                box.querySelector('span').hidden = true;
+            });
+        });
+    </script>
+}

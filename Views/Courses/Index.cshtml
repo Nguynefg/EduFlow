@@ -1,0 +1,131 @@
+﻿@model CourseListViewModel
+@{
+    ViewData["Title"] = "Khám phá khóa học";
+    ViewData["FullWidth"] = true;
+
+    var from = Model.Total == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1;
+    var to = Math.Min(Model.Page * Model.PageSize, Model.Total);
+
+    // Tạo link phân trang giữ nguyên các bộ lọc đang chọn
+    string PageUrl(int page)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(Model.Query)) parts.Add("q=" + Uri.EscapeDataString(Model.Query));
+        if (Model.CategoryId != null) parts.Add("categoryId=" + Model.CategoryId);
+        foreach (var l in Model.Levels) parts.Add("level=" + l);
+        if (Model.Price != null) parts.Add("price=" + Model.Price);
+        if(Model.MinRating.HasValue)parts.Add("minRating="+Model.MinRating.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        parts.Add("sort=" + Model.Sort);
+        parts.Add("page=" + page);
+        return "/Courses?" + string.Join("&", parts);
+    }
+}
+
+<!-- Phần đầu trang -->
+<section class="catalog-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid lg:grid-cols-2 gap-8 items-center">
+        <div>
+            <h1 class="text-4xl sm:text-5xl font-black text-slate-900">Khám phá <span>khóa học</span></h1>
+            <p class="mt-4 text-lg text-slate-600 max-w-xl">Tìm và đăng ký khóa học thuộc nhiều lĩnh vực để nâng cao kỹ năng và phát triển sự nghiệp của bạn.</p>
+        </div>
+        <img src="~/images/illustration-desk.svg" alt="" class="hidden lg:block w-full max-w-md ml-auto" />
+    </div>
+</section>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 catalog-layout">
+    <!-- ===== BỘ LỌC ===== -->
+    <form method="get" class="filter-panel">
+        <div class="flex items-center justify-between">
+            <h2>Bộ lọc</h2>
+            <a asp-action="Index" class="text-sm font-semibold text-blue-600">Xóa tất cả</a>
+        </div>
+        <input type="hidden" name="sort" value="@Model.Sort" />
+
+        <div class="filter-group">
+            <label for="catalog-search">Tìm kiếm</label>
+            <input id="catalog-search" name="q" maxlength="100" value="@Model.Query" class="filter-input" placeholder="Tên khóa học..." />
+        </div>
+
+        <div class="filter-group">
+            <label for="catalog-category">Danh mục</label>
+            <select id="catalog-category" name="categoryId" class="filter-input">
+                <option value="">Tất cả danh mục</option>
+                @foreach (var c in Model.Categories)
+                {
+                    <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@(c.ParentId != null ? "— " : "")@c.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <p>Cấp độ</p>
+            @foreach (var level in CourseLevel.All)
+            {
+                <label class="filter-check">
+                    <input type="checkbox" name="level" value="@level" checked="@Model.Levels.Contains(level)" />
+                    @UiText.Level(level) <em>(@Model.LevelCounts.GetValueOrDefault(level))</em>
+                </label>
+            }
+        </div>
+
+        <div class="filter-group">
+            <p>Học phí</p>
+            <label class="filter-check"><input type="radio" name="price" value="" checked="@(Model.Price == null)" /> Tất cả <em>(@(Model.FreeCount + Model.PaidCount))</em></label>
+            <label class="filter-check"><input type="radio" name="price" value="free" checked="@(Model.Price == "free")" /> Miễn phí <em>(@Model.FreeCount)</em></label>
+            <label class="filter-check"><input type="radio" name="price" value="paid" checked="@(Model.Price == "paid")" /> Trả phí <em>(@Model.PaidCount)</em></label>
+        </div>
+
+        <div class="filter-group"><label for="minRating">Điểm đánh giá tối thiểu</label><select class="filter-input" id="minRating" name="minRating"><option value="">Tất cả đánh giá</option>@foreach(var rate in new[]{4.5m,4m,3m,2m,1m}){<option value="@rate.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@(Model.MinRating==rate)">@rate.ToString("0.#") sao trở lên</option>}</select></div>
+        <button class="filter-apply">Áp dụng bộ lọc</button>
+        <a asp-action="Index" class="filter-reset"><i data-lucide="rotate-ccw" class="w-4 h-4"></i> Đặt lại</a>
+    </form>
+
+    <!-- ===== KẾT QUẢ ===== -->
+    <div>
+        <div class="catalog-toolbar">
+            <span>Hiển thị @from – @to trên @Model.Total khóa học</span>
+            <label class="flex items-center gap-2">
+                Sắp xếp:
+                <select onchange="location.href = this.value">
+                    @foreach (var s in new[] { ("popular", "Phổ biến nhất"), ("newest", "Mới nhất"), ("rating", "Đánh giá cao"), ("price-asc", "Giá thấp → cao"), ("price-desc", "Giá cao → thấp") })
+                    {
+                        var url = PageUrl(1).Replace("sort=" + Model.Sort, "sort=" + s.Item1);
+                        <option value="@url" selected="@(Model.Sort == s.Item1)">@s.Item2</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <partial name="_Courses" model="Model.Courses" />
+
+        <!-- Phân trang -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="pager" aria-label="Phân trang">
+                @if (Model.Page > 1)
+                {
+                    <a href="@PageUrl(Model.Page - 1)" aria-label="Trang trước"><i data-lucide="arrow-left" class="w-4 h-4"></i></a>
+                }
+                @for (var p = 1; p <= Model.TotalPages; p++)
+                {
+                    if (p == Model.Page)
+                    {
+                        <span class="is-current">@p</span>
+                    }
+                    else if (p == 1 || p == Model.TotalPages || Math.Abs(p - Model.Page) <= 2)
+                    {
+                        <a href="@PageUrl(p)">@p</a>
+                    }
+                    else if (Math.Abs(p - Model.Page) == 3)
+                    {
+                        <span>…</span>
+                    }
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a href="@PageUrl(Model.Page + 1)" aria-label="Trang sau"><i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+                }
+            </nav>
+        }
+    </div>
+</div>

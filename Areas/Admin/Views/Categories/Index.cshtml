@@ -1,0 +1,106 @@
+@model AdminCategoriesViewModel
+@{
+    ViewData["Title"] = "Danh mục";
+    var parents = Model.Categories.Where(c => c.ParentId == null).ToList();
+}
+
+<div class="admin-heading">
+    <div>
+        <span class="eyebrow">PHÂN LOẠI KHÓA HỌC</span>
+        <h1>Danh mục khóa học</h1>
+        <p class="muted">Danh mục có 2 cấp: danh mục cha (VD: Lập trình) và danh mục con (VD: Lập trình Web).</p>
+    </div>
+    <span class="admin-updated"><i data-lucide="folder-tree"></i>@Model.Categories.Count danh mục</span>
+</div>
+
+<!-- Thêm danh mục -->
+<section class="panel admin-section mb-6">
+    <div class="admin-section-heading">
+        <div class="admin-section-title">
+            <span class="admin-task-icon"><i data-lucide="folder-plus"></i></span>
+            <div>
+                <h2>Thêm danh mục</h2>
+                <p class="muted">Chọn danh mục cha để tạo danh mục con, hoặc để trống để tạo danh mục cấp 1.</p>
+            </div>
+        </div>
+    </div>
+    <form asp-action="Save" method="post" class="admin-inline-form">
+        <input name="name" placeholder="Tên danh mục" required maxlength="255" />
+        <select name="parentId">
+            <option value="">— Danh mục cấp 1 —</option>
+            @foreach (var p in parents)
+            {
+                <option value="@p.Id">Con của: @p.Name</option>
+            }
+        </select>
+        <input type="hidden" name="isActive" value="true" />
+        <button class="button"><i data-lucide="plus" class="w-4 h-4"></i>Thêm danh mục</button>
+    </form>
+</section>
+
+<!-- Danh sách -->
+<section class="panel admin-section">
+    <div class="admin-section-heading">
+        <div class="admin-section-title">
+            <span class="admin-task-icon"><i data-lucide="list-tree"></i></span>
+            <div>
+                <h2>Danh sách danh mục</h2>
+                <p class="muted">Sửa trực tiếp trên dòng rồi bấm nút lưu.</p>
+            </div>
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="admin-edit-table">
+            <thead><tr><th>Tên danh mục</th><th>Danh mục cha</th><th>Hiển thị</th><th>Số khóa học</th><th class="col-actions">Thao tác</th></tr></thead>
+            <tbody>
+                @foreach (var c in Model.Categories)
+                {
+                    var formId = "category-" + c.Id;
+                    var count = Model.CourseCounts.GetValueOrDefault(c.Id);
+                    <tr>
+                        @* Sửa trực tiếp trên dòng: các ô nhập gắn vào form ở cột Thao tác bằng thuộc tính form="..." *@
+                        <td>
+                            <div class="admin-category-name @(c.ParentId != null ? "is-child" : "")">
+                                <i data-lucide="@(c.ParentId == null ? "folder" : "corner-down-right")"></i>
+                                <input form="@formId" name="name" value="@c.Name" required maxlength="255" aria-label="Tên danh mục" />
+                            </div>
+                        </td>
+                        <td>
+                            <select form="@formId" name="parentId" aria-label="Danh mục cha">
+                                <option value="">— Cấp 1 —</option>
+                                @foreach (var p in parents.Where(p => p.Id != c.Id))
+                                {
+                                    <option value="@p.Id" selected="@(c.ParentId == p.Id)">@p.Name</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <select form="@formId" name="isActive" aria-label="Hiển thị">
+                                <option value="true" selected="@c.IsActive">Hiện</option>
+                                <option value="false" selected="@(!c.IsActive)">Ẩn</option>
+                            </select>
+                        </td>
+                        <td class="nowrap"><span class="badge @(count > 0 ? "approved" : "")">@count khóa học</span></td>
+                        <td class="col-actions">
+                            <div class="icon-actions">
+                                <form id="@formId" asp-action="Save" method="post">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button class="icon-btn approve" data-tip="Lưu thay đổi" aria-label="Lưu"><i data-lucide="save"></i></button>
+                                </form>
+                                <a href="/Courses?categoryId=@c.Id" target="_blank" class="icon-btn view" data-tip="Xem khóa học" aria-label="Xem khóa học"><i data-lucide="square-arrow-out-up-right"></i></a>
+                                <form asp-action="Delete" method="post" data-confirm="Xóa danh mục @c.Name?">
+                                    <input type="hidden" name="id" value="@c.Id" />
+                                    <button class="icon-btn danger" data-tip="Xóa danh mục" aria-label="Xóa"><i data-lucide="trash-2"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.Categories.Count == 0)
+        {
+            <div class="admin-empty"><i data-lucide="folder-plus"></i><h3>Chưa có danh mục</h3><p>Thêm danh mục để giảng viên chọn khi tạo khóa học.</p></div>
+        }
+    </div>
+</section>

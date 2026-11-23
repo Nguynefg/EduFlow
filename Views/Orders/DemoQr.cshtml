@@ -1,0 +1,54 @@
+﻿@model OrderDetailsViewModel
+@{
+    ViewData["Title"] = "QR thanh toán mô phỏng";
+    var order = Model.Order;
+    var remainingSeconds = Math.Max(0, (int)(order.CreatedAt.AddMinutes(30) - DateTime.Now).TotalSeconds);
+}
+
+<a asp-action="Details" asp-route-id="@order.Id">← Chi tiết đơn hàng</a>
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">EDUFLOW DEMO</span>
+        <h1>Thanh toán đơn #@order.Id</h1>
+        <p class="muted">Quét QR để xem thông tin đơn, rồi xác nhận mô phỏng để vào học.</p>
+    </div>
+    <span class="demo-badge">Không trừ tiền thật</span>
+</div>
+
+<div class="checkout-grid qr-checkout">
+    <section class="panel qr-payment-card">
+        <h2>QR thanh toán mô phỏng</h2>
+        <p class="qr-amount">@UiText.Price(order.TotalPrice)</p>
+        <div class="qr-frame">
+            <img src="@Url.Action("DemoQrImage", new { id = order.Id })" width="280" height="280" alt="Mã QR mô phỏng cho đơn @order.Id, không chuyển tiền thật" />
+        </div>
+        <p class="qr-expiry" data-qr-seconds="@remainingSeconds" role="status">Mã có hiệu lực trong thời gian còn lại của đơn.</p>
+        <p class="hint">QR chứa thông tin demo, không phải mã chuyển khoản ngân hàng. Quét mã không tự xác nhận thanh toán.</p>
+        <a asp-action="DemoQrImage" asp-route-id="@order.Id" download="eduflow-demo-@(order.Id).png">Tải mã QR</a>
+    </section>
+    <aside class="panel">
+        <h2>Thông tin đơn hàng</h2>
+        @foreach (var item in order.Items)
+        {
+            var course = Model.Courses.GetValueOrDefault(item.CourseId);
+            <div class="checkout-item">
+                <div><h3>@course?.Title</h3><small class="muted">@UiText.Price(item.Price)</small></div>
+            </div>
+        }
+        <dl class="checkout-totals">
+            <dt>Mã đơn</dt><dd>#@order.Id</dd>
+            <dt>Số khóa học</dt><dd>@order.Items.Count</dd>
+            <dt>Cần thanh toán</dt><dd><strong>@UiText.Price(order.TotalPrice)</strong></dd>
+        </dl>
+        <div class="notice"><strong>Chế độ mô phỏng</strong><p>Xác nhận ghi nhận giao dịch, mở quyền học và tăng doanh thu/số dư mô phỏng của giảng viên. Không gọi ngân hàng hoặc trừ tiền thật.</p></div>
+        <form asp-action="DemoPay" method="post" data-confirm="Xác nhận thanh toán mô phỏng cho đơn này? Không trừ tiền thật.">
+            <input type="hidden" name="id" value="@order.Id" />
+            <button class="button" data-demo-confirm>Xác nhận thanh toán mô phỏng</button>
+        </form>
+        <a class="button secondary mt-4" asp-controller="Cart" asp-action="Index">Quay lại giỏ hàng</a>
+    </aside>
+</div>
+
+@section Scripts {
+    <script src="~/js/demo-qr.js" asp-append-version="true"></script>
+}

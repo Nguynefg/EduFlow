@@ -1,0 +1,44 @@
+﻿@model LessonPreviewViewModel
+@{
+    ViewData["Title"] = Model.Lesson.Title;
+    var youtube = VideoHelper.YouTubeEmbed(Model.Lesson.VideoUrl);
+}
+
+<a asp-action="Details" asp-route-id="@Model.Course.Id">← @Model.Course.Title</a>
+
+<section class="panel mt-4">
+    <span class="eyebrow">HỌC THỬ MIỄN PHÍ · @UiText.LessonType(Model.Lesson.LessonType).ToUpper()</span>
+    <h1>@Model.Lesson.Title</h1>
+
+    @if (Model.Lesson.LessonType == LessonType.Video)
+    {
+        @if (youtube != null)
+        {
+            <div class="aspect-video"><iframe src="@youtube" class="w-full h-full rounded-xl" allowfullscreen></iframe></div>
+        }
+        else
+        {
+            <video src="@Url.Action("Lesson","MediaStream",new{id=Model.Lesson.Id})" controls controlslist="nodownload" class="w-full rounded-xl bg-black"></video>
+        }
+    }
+    else if (Model.Lesson.LessonType == LessonType.Article)
+    {
+        @* Nội dung đã được lọc mã độc khi lưu (HtmlSanitizer) *@
+        <article class="lesson-article rich-content">@RichText.Render(VideoHelper.ProtectHtml(Model.Lesson.Content,Url.Action("Attachment","MediaStream",new{lessonId=Model.Lesson.Id})!))</article>
+    }
+    else
+    {
+        <p>Bài kiểm tra chỉ làm được sau khi đăng ký khóa học.</p>
+    }
+
+    @if (Model.Lesson.Resources.Count > 0)
+    {
+        <h2 class="mt-6">Tài liệu đính kèm</h2>
+        <ul>
+            @foreach (var r in Model.Lesson.Resources)
+            {
+                <li><a asp-area="" asp-controller="MediaStream" asp-action="Resource" asp-route-id="@r.Id"><i data-lucide="paperclip" class="w-4 h-4 inline"></i> @r.FileName</a> <span class="muted text-xs">(@(r.FileSize / 1024) KB)</span></li>
+            }
+        </ul>
+    }
+</section>

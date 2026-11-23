@@ -1,0 +1,37 @@
+﻿@model RegisterViewModel
+@* Form dùng chung cho trang Đăng ký và trang Tạo admin đầu tiên *@
+<form method="post" class="auth-form">
+    <div asp-validation-summary="ModelOnly" class="validation"></div>
+    <input asp-for="ReturnUrl" type="hidden" />
+
+    <label asp-for="FullName" class="sr-only"></label>
+    <input asp-for="FullName" class="auth-input" placeholder="Họ và tên" autocomplete="name" />
+    <span asp-validation-for="FullName" class="validation"></span>
+
+    <label asp-for="Email" class="sr-only"></label>
+    <input asp-for="Email" class="auth-input" placeholder="Email" autocomplete="email" />
+    <span asp-validation-for="Email" class="validation"></span>
+
+    <label asp-for="Password" class="sr-only"></label>
+    <div class="auth-password-field">
+        <input asp-for="Password" class="auth-input" placeholder="Mật khẩu" autocomplete="new-password" />
+        <partial name="_PasswordToggle" model='("Password", "mật khẩu")' />
+    </div>
+    <span asp-validation-for="Password" class="validation"></span>
+    <p class="auth-hint">Ít nhất 10 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</p>
+
+    <label asp-for="ConfirmPassword" class="sr-only"></label>
+    <div class="auth-password-field">
+        <input asp-for="ConfirmPassword" class="auth-input" placeholder="Nhập lại mật khẩu" autocomplete="new-password" />
+        <partial name="_PasswordToggle" model='("ConfirmPassword", "mật khẩu nhập lại")' />
+    </div>
+    <span asp-validation-for="ConfirmPassword" class="validation"></span>
+
+    @if (ViewBag.IsSetup == true)
+    {
+        <label for="SetupKey">Khóa thiết lập quản trị viên</label>
+        <input id="SetupKey" name="SetupKey" type="password" class="auth-input" autocomplete="off" required maxlength="512" />
+        <span asp-validation-for="SetupKey" class="validation"></span>
+    }
+    <button class="auth-button">Tạo tài khoản</button>
+</form>

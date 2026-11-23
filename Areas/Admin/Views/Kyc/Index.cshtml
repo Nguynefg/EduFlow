@@ -1,0 +1,101 @@
+@model AdminKycViewModel
+@{ ViewData["Title"] = "Duyệt giảng viên"; }
+
+<div class="admin-heading">
+    <div>
+        <span class="eyebrow">HỒ SƠ KYC</span>
+        <h1>Duyệt đăng ký giảng viên</h1>
+        <p class="muted">@Model.PendingCount hồ sơ đang chờ duyệt. Kiểm tra CCCD, mã số thuế và tài khoản ngân hàng trước khi duyệt.</p>
+    </div>
+</div>
+
+<!-- Lọc theo trạng thái -->
+<nav class="admin-tabs" aria-label="Lọc theo trạng thái">
+    @foreach (var t in new (string Status, string Label, string Icon)[] { ("pending", "Chờ duyệt", "hourglass"), ("approved", "Đã duyệt", "badge-check"), ("rejected", "Bị từ chối", "circle-x"), ("", "Tất cả", "layers") })
+    {
+        var active = string.IsNullOrEmpty(t.Status) ? string.IsNullOrEmpty(Model.Status) : Model.Status == t.Status;
+        <a asp-action="Index" asp-route-status="@t.Status" class="@(active ? "is-active" : "")" aria-current="@(active ? "page" : null)"><i data-lucide="@t.Icon"></i>@t.Label</a>
+    }
+</nav>
+
+<section class="panel admin-section">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Người gửi</th><th>Chức danh</th><th>CCCD / MST</th><th>Ngân hàng</th><th>Ngày gửi</th><th>Trạng thái</th><th class="col-actions">Thao tác</th></tr></thead>
+            <tbody>
+                @foreach (var p in Model.Profiles)
+                {
+                    <tr>
+                        <td>
+                            <div class="admin-user-cell">
+                                <span class="admin-user-avatar">@p.User!.FullName.FirstOrDefault()</span>
+                                <div><strong class="admin-cell-title">@p.User.FullName</strong><small class="admin-cell-sub">@p.User.Email</small></div>
+                            </div>
+                        </td>
+                        <td>@p.Headline</td>
+                        <td class="nowrap">
+                            <span class="admin-cell-meta !mt-0"><i data-lucide="id-card"></i>@p.IdentityCard</span><br />
+                            <span class="admin-cell-meta"><i data-lucide="receipt-text"></i>@p.TaxId</span>
+                        </td>
+                        <td>
+                            <span class="admin-cell-main">@p.BankName</span>
+                            <span class="admin-cell-meta"><i data-lucide="landmark"></i>@p.BankAccountNumber · @p.BankAccountName</span>
+                        </td>
+                        <td class="nowrap">
+                            @if (p.SubmittedAt is DateTime sent)
+                            {
+                                <span class="admin-cell-date">@sent.ToString("dd/MM/yyyy")<small>@sent.ToString("HH:mm")</small></span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @p.KycStatus">@UiText.Kyc(p.KycStatus)</span>
+                            @if (p.KycStatus == KycStatus.Rejected && !string.IsNullOrEmpty(p.KycRejectReason))
+                            {
+                                <small class="admin-cell-reason" title="@p.KycRejectReason">@p.KycRejectReason</small>
+                            }
+                        </td>
+                        <td class="col-actions">
+                            <div class="icon-actions">
+                                <a asp-controller="Users" asp-action="Edit" asp-route-id="@p.UserId" class="icon-btn view" data-tip="Xem tài khoản" aria-label="Xem tài khoản">
+                                    <i data-lucide="user-round"></i>
+                                </a>
+                                @if (p.KycStatus == KycStatus.Pending)
+                                {
+                                    <form asp-action="Approve" method="post" data-confirm="Duyệt @p.User.FullName làm giảng viên?">
+                                        <input type="hidden" name="userId" value="@p.UserId" />
+                                        <button class="icon-btn approve" data-tip="Duyệt hồ sơ" aria-label="Duyệt"><i data-lucide="badge-check"></i></button>
+                                    </form>
+                                    <button type="button" class="icon-btn danger" data-tip="Từ chối" aria-label="Từ chối"
+                                            data-reason="rejectDialog" data-value="@p.UserId" data-name="@p.User.FullName">
+                                        <i data-lucide="circle-x"></i>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.Profiles.Count == 0)
+        {
+            <div class="admin-empty"><i data-lucide="inbox"></i><h3>Không có hồ sơ nào</h3></div>
+        }
+    </div>
+</section>
+
+<!-- Hộp thoại nhập lý do từ chối (mở khi bấm icon X) -->
+<dialog id="rejectDialog" class="reason-dialog">
+    <form asp-action="Reject" method="post">
+        <div class="reason-dialog-head">
+            <span class="reason-dialog-icon danger"><i data-lucide="user-x"></i></span>
+            <h2>Từ chối hồ sơ của <span data-name></span></h2>
+        </div>
+        <p class="muted text-sm mt-1">Người dùng sẽ thấy lý do này và có thể sửa hồ sơ để gửi lại.</p>
+        <input type="hidden" name="userId" data-target />
+        <textarea name="reason" rows="4" maxlength="500" required placeholder="Ví dụ: Số CCCD chưa đúng, vui lòng kiểm tra lại."></textarea>
+        <div class="dialog-actions">
+            <button type="button" class="button secondary" data-dialog-close>Hủy</button>
+            <button class="button danger">Xác nhận từ chối</button>
+        </div>
+    </form>
+</dialog>

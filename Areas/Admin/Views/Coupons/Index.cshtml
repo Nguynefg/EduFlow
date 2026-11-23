@@ -1,0 +1,44 @@
+﻿@model List<Coupon>
+@{ViewData["Title"]="Mã giảm giá";}
+<div class="page-heading">
+<h1>Mã giảm giá</h1>
+<a class="button" asp-action="Edit">Tạo mã giảm giá</a>
+</div>
+<section class="panel">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Mức giảm</th>
+<th>Hiệu lực</th>
+<th>Đã dùng / giới hạn</th>
+<th>Trạng thái</th>
+<th class="coupon-actions-heading">Thao tác</th>
+</tr>
+</thead>
+<tbody>
+@foreach(var c in Model){<tr>
+<td>@c.Code</td>
+<td>@(c.DiscountType=="percent"?c.DiscountValue.ToString("0")+"%":UiText.Price(c.DiscountValue)) @if(c.MaxDiscount!=null){<small>Tối đa @UiText.Price(c.MaxDiscount.Value)</small>}</td>
+<td>@c.StartDate.ToString("dd/MM/yyyy HH:mm") → @c.EndDate.ToString("dd/MM/yyyy HH:mm")</td>
+<td>@c.UsedCount / @(c.TotalLimit?.ToString()??"Không giới hạn")</td>
+<td>@(c.IsActive?"Đang bật":"Đã tắt")</td>
+<td class="coupon-actions-cell">
+    <div class="coupon-actions">
+        <a class="action-btn view" asp-action="Edit" asp-route-id="@c.Id" aria-label="Sửa mã @c.Code">
+            <i data-lucide="pencil" aria-hidden="true"></i><span>Sửa</span>
+        </a>
+        <form asp-action="Toggle" method="post">
+            <input type="hidden" name="id" value="@c.Id" />
+            <button type="submit" class="action-btn @(c.IsActive ? "warn" : "approve")" aria-label="@(c.IsActive ? "Tắt" : "Bật") mã @c.Code">
+                <i data-lucide="@(c.IsActive ? "pause" : "play")" aria-hidden="true"></i><span>@(c.IsActive ? "Tắt mã" : "Bật mã")</span>
+            </button>
+        </form>
+    </div>
+</td>
+</tr>}
+</tbody>
+</table>
+</div>
+</section>

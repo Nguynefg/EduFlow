@@ -1,0 +1,88 @@
+@model ProfileViewModel
+@{ ViewData["Title"] = "Thông tin cá nhân"; }
+
+<div class="page-heading">
+    <div>
+        <span class="eyebrow">TÀI KHOẢN CỦA BẠN</span>
+        <h1>Thông tin cá nhân</h1>
+        <p class="muted">Cập nhật ảnh đại diện, thông tin và liên kết mạng xã hội.</p>
+    </div>
+</div>
+
+<div class="profile-grid">
+    <aside class="panel profile-card">
+        @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+        {
+            <img class="avatar" src="@Model.AvatarUrl" alt="Ảnh đại diện" />
+        }
+        else
+        {
+            <div class="avatar">@Model.FullName.FirstOrDefault()</div>
+        }
+        <h2>@Model.FullName</h2>
+        <p class="muted">@Model.Email</p>
+        @foreach (var role in Model.Roles)
+        {
+            <span class="badge">@UiText.Role(role)</span>
+        }
+    </aside>
+
+    <section class="panel profile-details">
+        <h2>Chỉnh sửa hồ sơ</h2>
+        <form asp-action="Index" method="post" enctype="multipart/form-data">
+            <label for="email">Email đăng nhập</label>
+            <input id="email" value="@Model.Email" readonly />
+
+            <label asp-for="FullName"></label>
+            <input asp-for="FullName" />
+            <span asp-validation-for="FullName" class="validation"></span>
+
+            <label asp-for="PhoneNumber"></label>
+            <input asp-for="PhoneNumber" />
+            <span asp-validation-for="PhoneNumber" class="validation"></span>
+
+            <label asp-for="Bio"></label>
+            <textarea asp-for="Bio" rows="4"></textarea>
+
+            <label asp-for="AvatarImage"></label>
+            <div class="profile-avatar-upload" data-avatar-upload>
+                <div class="profile-avatar-preview">
+                    <img src="@Model.AvatarUrl" alt="Ảnh đại diện xem trước" hidden="@(string.IsNullOrEmpty(Model.AvatarUrl))" data-avatar-preview />
+                    <span data-avatar-placeholder hidden="@(!string.IsNullOrEmpty(Model.AvatarUrl))"><i data-lucide="user-round" aria-hidden="true"></i></span>
+                </div>
+                <div class="profile-avatar-controls">
+                    <strong>Chọn ảnh đại diện của bạn</strong>
+                    <p class="hint" data-avatar-filename aria-live="polite">Ảnh vuông sẽ hiển thị đẹp nhất.</p>
+                    <input asp-for="AvatarImage" type="file" accept=".jpg,.jpeg,.png,.webp" aria-describedby="avatarHelp" />
+                    <div class="profile-avatar-buttons">
+                        <button type="button" class="button secondary" data-avatar-choose hidden><i data-lucide="image-plus" aria-hidden="true"></i>Chọn ảnh</button>
+                        <button type="button" class="profile-avatar-reset" data-avatar-reset hidden>Bỏ chọn</button>
+                    </div>
+                </div>
+            </div>
+            <span asp-validation-for="AvatarImage" class="validation"></span>
+            <p class="hint" id="avatarHelp">JPG, PNG hoặc WebP · Tối đa 5 MB. Không chọn ảnh mới sẽ giữ ảnh hiện tại.</p>
+
+            <label asp-for="Facebook"></label>
+            <input asp-for="Facebook" placeholder="https://facebook.com/..." />
+            <span asp-validation-for="Facebook" class="validation"></span>
+
+            <label asp-for="Github"></label>
+            <input asp-for="Github" placeholder="https://github.com/..." />
+            <span asp-validation-for="Github" class="validation"></span>
+
+            <label asp-for="Linkedin"></label>
+            <input asp-for="Linkedin" placeholder="https://linkedin.com/in/..." />
+            <span asp-validation-for="Linkedin" class="validation"></span>
+
+            <button class="button profile-save" type="submit">Lưu thay đổi</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/profile-avatar.js" asp-append-version="true"></script>
+}
+
+<section class="panel" style="margin-top:24px"><h2>Xác thực email</h2>@if(Model.EmailVerifiedAt.HasValue){<p>Đã xác thực lúc @Model.EmailVerifiedAt.Value.ToString("dd/MM/yyyy HH:mm").</p>}else{<p>Gửi liên kết xác thực tới địa chỉ email của tài khoản.</p><form asp-controller="Account" asp-action="ResendVerification" method="post"><button class="button secondary">Gửi email xác thực</button></form>}</section>
+

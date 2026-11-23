@@ -1,0 +1,21 @@
+HUONG DAN CHAY EDUFLOW
+======================
+
+Yeu cau: .NET SDK, SQL Server 2022 tro len (Express/Developer deu duoc), SSMS.
+(File .bak tao tu SQL Server 2022 -> khong restore duoc tren ban cu hon nhu 2019.)
+
+1. Giai nen EduFlow.zip.
+
+2. Restore database (KHONG can tao database truoc):
+   - Mo SSMS, chuot phai "Databases" -> Restore Database...
+   - Source: Device -> ... -> Add -> chon EduFlowDB.bak
+   - Tab "Files": tick "Relocate all files to folder"
+   - OK -> se tu tao database EduFlowDB kem toan bo du lieu.
+
+3. Sua appsettings.json, dong DefaultConnection, phan Server= cho dung may minh:
+   "Server=.;Database=EduFlowDB;Trusted_Connection=True;Encrypt=True;TrustServerCertificate=True;"
+   (hoac .\SQLEXPRESS, hoac (localdb)\MSSQLLocalDB - tuy may)
+
+4. Mo terminal trong thu muc du an, chay:  dotnet run
+
+Anh/video/file upload da nam san trong wwwroot\uploads.

@@ -1,0 +1,28 @@
+﻿@model List<PayoutRequest>
+@{
+    ViewData["Title"] = "Sổ thuế TNCN";
+    DateTime from = ViewBag.From, to = ViewBag.To;
+    bool simulation = ViewBag.SimulationEnabled == true;
+    var tax = Model.Sum(p => p.TaxAmount ?? 0);
+    var remitted = Model.Where(p => p.TaxRemittedOn.HasValue).Sum(p => p.TaxAmount ?? 0);
+}
+@section Styles { <link rel="stylesheet" href="~/css/tax.css" asp-append-version="true" /> }
+<div class="page-heading"><div><span class="eyebrow">THUẾ THÙ LAO CÁ NHÂN</span><h1>Sổ thuế TNCN</h1></div><a class="button secondary" asp-action="Index">Quản lý rút tiền</a></div>
+@if(simulation){<div class="notice">Sổ thuế mô phỏng. Ghi nhận nộp thuế chỉ thay đổi trạng thái trong hệ thống, không nộp tiền thật.</div>}
+<section class="panel"><form method="get" class="tax-report-form">
+<div><label for="from">Từ ngày chi trả</label><input id="from" name="from" type="date" value="@from.ToString("yyyy-MM-dd")" required /></div>
+<div><label for="to">Đến ngày chi trả</label><input id="to" name="to" type="date" value="@to.ToString("yyyy-MM-dd")" required /></div>
+<button class="button">Lọc</button><button class="button secondary" name="export" value="true">Xuất CSV</button>
+</form><p class="muted">Theo ngày chuyển khoản thực tế admin nhập từ biên lai. Chỉ tính khoản đã xác nhận chi trả có thông tin thuế trong chế độ hiện tại. Dữ liệu cũ chưa xác định thuế không được tự coi là miễn thuế.</p></section>
+<div class="tax-grid tax-panel"><section class="panel">Đã khấu trừ<strong>@UiText.Money(tax)</strong></section><section class="panel">Đã ghi nhận nộp<strong>@UiText.Money(remitted)</strong></section><section class="panel">Chưa ghi nhận nộp<strong>@UiText.Money(tax-remitted)</strong></section></div>
+<section class="panel tax-panel"><h2>Chi tiết khoản chi</h2>
+<p class="muted">Khấu trừ không có nghĩa đã nộp ngân sách. @(simulation ? "Dùng mã tham chiếu mô phỏng bên dưới để thực hành quy trình." : "Kế toán nộp thuế bên ngoài hệ thống rồi ghi mã chứng từ bên dưới.") CSV là bảng đối soát nội bộ, không phải tờ khai hay chứng từ khấu trừ thuế điện tử.</p>
+@if(Model.Count==0){<p>Chưa có khoản chi phù hợp.</p>}
+else {<div class="tax-table-wrap" tabindex="0" role="region" aria-label="Bảng thuế TNCN"><table><thead><tr><th scope="col">Khoản chi / người nhận</th><th scope="col">Ngày chi</th><th scope="col">Trước thuế</th><th scope="col">Thuế TNCN</th><th scope="col">Thực nhận</th><th scope="col">Nộp thuế</th></tr></thead><tbody>
+@foreach(var row in Model){<tr><td>#@row.Id · @row.PayeeNameSnapshot<small>@row.TaxIdSnapshot</small></td><td>@row.PaidAt?.ToString("dd/MM/yyyy")</td><td>@UiText.Money(row.Amount)</td><td>@UiText.Money(row.TaxAmount??0) (@row.TaxRate%)</td><td>@UiText.Money(row.NetAmount??0)</td><td>
+@if(row.TaxAmount==0){<span>Không khấu trừ trong khoản chi này</span>}
+else if(row.TaxRemittedOn.HasValue){<strong>Đã ghi nhận nộp @row.TaxRemittedOn.Value.ToString("dd/MM/yyyy")</strong><small>@row.TaxRemittanceRef</small>}
+else {<form asp-action="RemitTax" method="post"><input type="hidden" name="id" value="@row.Id" /><label for="date-@row.Id">Ngày nộp theo chứng từ</label><input id="date-@row.Id" name="remittedOn" type="date" value="@(simulation ? DateTime.Today.ToString("yyyy-MM-dd") : "")" min="@row.PaidAt?.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required /><label for="ref-@row.Id">Mã chứng từ nộp thuế</label><input id="ref-@row.Id" name="reference" value="@(simulation ? $"SIM-TAX-{row.Id}" : "")" maxlength="200" required /><button class="button">@(simulation ? "Xác nhận nộp thuế mô phỏng" : "Ghi nhận đã nộp")</button></form>}
+</td></tr>}
+</tbody></table></div>}</section>
+

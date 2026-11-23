@@ -1,0 +1,111 @@
+﻿@model KycPageViewModel
+@{ ViewData["Title"] = "Trở thành giảng viên"; }
+@section Styles {
+    <link rel="stylesheet" href="~/css/instructor-application.css" asp-append-version="true" />
+}
+<div class="instructor-application">
+    <header class="ky-heading">
+        <span class="eyebrow">CHIA SẺ KIẾN THỨC</span>
+        <h1>Trở thành giảng viên</h1>
+        <p>Hoàn thiện hồ sơ để bắt đầu xây dựng khóa học và chia sẻ chuyên môn trên EduFlow.</p>
+    </header>
+
+    @if (Model.IsInstructor)
+    {
+        <section class="ky-card ky-approved">
+            <i data-lucide="badge-check" aria-hidden="true"></i>
+            <h2>Bạn đã là giảng viên của EduFlow</h2>
+            <p>Vào Studio để tạo khóa học và quản lý nội dung của bạn.</p>
+            <a class="button" asp-controller="Instructor" asp-action="Index">Vào Studio giảng viên</a>
+        </section>
+    }
+    else
+    {
+        @if (Model.Profile != null)
+        {
+            <section class="ky-card ky-status" aria-label="Trạng thái hồ sơ">
+                <div><h2>Hồ sơ của bạn</h2><p>Gửi lúc @Model.Profile.SubmittedAt?.ToString("dd/MM/yyyy HH:mm")</p></div>
+                <span class="badge @Model.Profile.KycStatus">@UiText.Kyc(Model.Profile.KycStatus)</span>
+                @if (Model.Profile.KycStatus == KycStatus.Rejected)
+                {
+                    <div class="notice error">Lý do từ chối: @Model.Profile.KycRejectReason</div>
+                    <p class="ky-status-note">Cập nhật thông tin bên dưới rồi gửi lại hồ sơ để được xét duyệt.</p>
+                }
+                else
+                {
+                    <p class="ky-status-note">Quản trị viên đang xem xét hồ sơ. Bạn vẫn có thể tiếp tục học các khóa đã đăng ký.</p>
+                }
+            </section>
+        }
+        <div class="ky-layout">
+            <section class="ky-card">
+                @if (Model.CanSubmit)
+                {
+                    <div class="ky-card-heading"><h2>@(Model.Profile == null ? "Đăng ký giảng viên" : "Cập nhật hồ sơ")</h2><p>Kiểm tra thông tin trước khi gửi xét duyệt.</p></div>
+                    <form method="post" class="ky-form">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="validation" role="alert"></div>
+                        <div class="ky-section">
+                            <h3><i data-lucide="user-round" aria-hidden="true"></i>Thông tin cá nhân</h3>
+            <label asp-for="Form.Headline"></label>
+            <input asp-for="Form.Headline" placeholder="Ví dụ: Lập trình viên .NET 5 năm kinh nghiệm" />
+            <span asp-validation-for="Form.Headline" class="validation"></span>
+
+            <label asp-for="Form.IdentityCard"></label>
+            <input asp-for="Form.IdentityCard" inputmode="numeric" maxlength="12" />
+            <span asp-validation-for="Form.IdentityCard" class="validation"></span>
+
+            <label asp-for="Form.TaxId"></label>
+            <input asp-for="Form.TaxId" maxlength="14" />
+            <span asp-validation-for="Form.TaxId" class="validation"></span>
+
+        </div>
+        <div class="ky-section">
+            <h3><i data-lucide="landmark" aria-hidden="true"></i>Tài khoản nhận tiền</h3>
+            <p class="ky-hint">Nhập tài khoản ngân hàng chính chủ để nhận các khoản chi trả.</p>
+            <label asp-for="Form.BankName"></label>
+            <input asp-for="Form.BankName" placeholder="Ví dụ: Vietcombank" />
+            <span asp-validation-for="Form.BankName" class="validation"></span>
+
+            <label asp-for="Form.BankAccountNumber"></label>
+            <input asp-for="Form.BankAccountNumber" inputmode="numeric" />
+            <span asp-validation-for="Form.BankAccountNumber" class="validation"></span>
+
+            <label asp-for="Form.BankAccountName"></label>
+            <input asp-for="Form.BankAccountName" placeholder="NGUYEN VAN A" />
+            <span asp-validation-for="Form.BankAccountName" class="validation"></span>
+
+
+                        </div>
+                        <div class="ky-actions">
+                            <button class="button" type="submit"><i data-lucide="send" aria-hidden="true"></i>Gửi hồ sơ xét duyệt</button>
+                            <span>Quyền học viên của bạn vẫn được giữ nguyên.</span>
+                        </div>
+                    </form>
+                }
+                else if (Model.Profile != null)
+                {
+                    <h2>Thông tin đã gửi</h2>
+                    <dl class="ky-details">
+                        <div><dt>Chức danh</dt><dd>@Model.Profile.Headline</dd></div>
+                        <div><dt>CCCD</dt><dd>@Model.Profile.IdentityCard</dd></div>
+                        <div><dt>Mã số thuế</dt><dd>@(Model.Profile.TaxId ?? "Chưa cung cấp")</dd></div>
+                        <div><dt>Ngân hàng</dt><dd>@Model.Profile.BankName</dd></div>
+                        <div><dt>Số tài khoản</dt><dd>@Model.Profile.BankAccountNumber</dd></div>
+                        <div><dt>Chủ tài khoản</dt><dd>@Model.Profile.BankAccountName</dd></div>
+                    </dl>
+                }
+            </section>
+            <aside class="ky-card ky-guide">
+                <span class="ky-guide-icon"><i data-lucide="graduation-cap" aria-hidden="true"></i></span>
+                <h2>Bắt đầu hành trình giảng dạy</h2>
+                <ol>
+                    <li><strong>Hoàn thiện hồ sơ</strong><p>Cung cấp thông tin định danh và tài khoản nhận tiền chính xác.</p></li>
+                    <li><strong>Chờ xét duyệt</strong><p>Quản trị viên kiểm tra hồ sơ trước khi cấp quyền giảng viên.</p></li>
+                    <li><strong>Xây dựng khóa học</strong><p>Sau khi được duyệt, vào Studio để tạo khóa học đầu tiên.</p></li>
+                </ol>
+                <div class="ky-guide-note"><i data-lucide="info" aria-hidden="true"></i><p>Tên chủ tài khoản viết hoa, không dấu và khớp với thông tin ngân hàng.</p></div>
+            </aside>
+        </div>
+    }
+</div>

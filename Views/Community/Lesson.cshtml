@@ -1,0 +1,5 @@
+﻿@model DiscussionViewModel
+@{ViewData["Title"]="Hỏi đáp · "+Model.Lesson.Title;}
+@section Styles {<link rel="stylesheet" href="~/css/community.css" asp-append-version="true"/>}
+<div class="page-heading"><div><span class="eyebrow">@Model.CourseTitle</span><h1>@Model.Lesson.Title</h1></div><a class="button secondary" asp-controller="Courses" asp-action="Details" asp-route-id="@Model.CourseId">Chi tiết khóa học</a></div>
+<div class="cm-card"><partial name="_LessonDiscussions" model="Model"/></div>

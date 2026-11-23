@@ -1,0 +1,129 @@
+﻿@using EduFlow.Web.Services
+@model List<MediaItem>
+@{
+    ViewData["Title"] = "Thư viện media";
+    var kind = (string?)ViewBag.Kind;
+    var used = (long)ViewBag.UsedBytes;
+    var percent = Math.Min(100, used * 100.0 / MediaLibraryService.MaxBytesPerUser);
+    string Size(long b) => b < 1024 * 1024 ? $"{Math.Max(1, b / 1024)} KB" : $"{b / 1024.0 / 1024:0.#} MB";
+    var tabs = new (string? Kind, string Label, string Icon)[] { (null, "Tất cả", "layers"), ("image", "Ảnh", "image"), ("video", "Video", "film") };
+}
+
+<div class="studio-page-head">
+    <div>
+        <span class="eyebrow">STUDIO GIẢNG VIÊN</span>
+        <h1>Thư viện media</h1>
+        <p class="muted">Nơi lưu ảnh và video để dùng lại trong mô tả khóa học, bài viết, ảnh bìa và video bài học.</p>
+    </div>
+    <div class="media-quota" title="@Size(used) / 2 GB">
+        <div><span>Dung lượng đã dùng</span><b>@Size(used) / 2 GB</b></div>
+        <span class="media-quota-bar"><span style="width:@percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"></span></span>
+    </div>
+</div>
+
+<!-- Khu tải lên: bấm chọn hoặc kéo thả -->
+<form asp-action="Upload" method="post" enctype="multipart/form-data" class="panel media-dropzone" data-media-dropzone>
+    <span class="studio-empty-icon"><i data-lucide="cloud-upload"></i></span>
+    <div>
+        <strong>Kéo thả file vào đây hoặc bấm để chọn</strong>
+        <p class="muted">Ảnh JPG, PNG, WebP, GIF (tối đa 5 MB) · Video MP4, WebM (tối đa 500 MB)</p>
+    </div>
+    <input type="file" name="files" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.mp4,.webm" aria-label="Chọn file tải lên" />
+    <div class="media-progress" hidden><span></span></div>
+</form>
+
+<div class="workspace-heading">
+    <nav class="studio-tabs" aria-label="Lọc theo loại">
+        @foreach (var t in tabs)
+        {
+            <a asp-action="Index" asp-route-kind="@t.Kind" class="@(kind == t.Kind ? "is-active" : "")"><i data-lucide="@t.Icon"></i>@t.Label</a>
+        }
+    </nav>
+    <span class="muted text-sm">@Model.Count file</span>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="panel studio-empty">
+        <span class="studio-empty-icon"><i data-lucide="images"></i></span>
+        <h3>Thư viện đang trống</h3>
+        <p class="muted">Tải ảnh hoặc video lên để dùng trong các khóa học của bạn.</p>
+    </div>
+}
+
+<div class="media-library-grid">
+    @foreach (var item in Model)
+    {
+        <article class="panel media-item">
+            <a class="media-thumb" href="@item.Url" target="_blank" aria-label="Mở @item.DisplayName">
+                @if (item.Kind == MediaLibraryService.Image)
+                {
+                    <img src="@item.PreviewUrl" alt="" loading="lazy" />
+                }
+                else
+                {
+                    <video src="@(item.PreviewUrl)#t=0.5" preload="metadata" muted></video>
+                    <span class="media-play"><i data-lucide="play"></i></span>
+                }
+            </a>
+            <div class="media-item-body">
+                <b title="@item.DisplayName">@item.DisplayName</b>
+                <small class="muted">@(item.Kind == MediaLibraryService.Image ? "Ảnh" : "Video") · @Size(item.Size) · @item.UploadedAt.ToString("dd/MM/yyyy")</small>
+            </div>
+            <div class="media-item-actions">
+                <button type="button" class="icon-btn view" data-copy="@item.Url" data-tip="Sao chép link" aria-label="Sao chép link"><i data-lucide="copy"></i></button>
+                <a class="icon-btn view" href="@item.Url" target="_blank" data-tip="Mở trong tab mới" aria-label="Mở"><i data-lucide="square-arrow-out-up-right"></i></a>
+                <form asp-action="Delete" method="post" data-confirm="Xóa @item.DisplayName? Khóa học nào đang dùng file này sẽ không hiện được nữa.">
+                    <input type="hidden" name="name" value="@item.Name" />
+                    <input type="hidden" name="kind" value="@kind" />
+                    <button class="icon-btn danger" data-tip="Xóa file" aria-label="Xóa"><i data-lucide="trash-2"></i></button>
+                </form>
+            </div>
+        </article>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Sao chép link file
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-copy]');
+            if (!btn) return;
+            navigator.clipboard.writeText(location.origin + btn.dataset.copy).then(function () {
+                var old = btn.dataset.tip;
+                btn.dataset.tip = 'Đã sao chép!';
+                btn.blur(); btn.focus();
+                setTimeout(function () { btn.dataset.tip = old; }, 1500);
+            });
+        });
+
+        // Tải lên ngay khi chọn / thả file, có thanh tiến trình
+        var zone = document.querySelector('[data-media-dropzone]');
+        var input = zone.querySelector('input[type=file]');
+        function send(files) {
+            if (!files.length) return;
+            var data = new FormData(zone);
+            data.delete('files');
+            for (var i = 0; i < files.length; i++) data.append('files', files[i]);
+            var progress = zone.querySelector('.media-progress'), bar = progress.querySelector('span');
+            progress.hidden = false;
+            zone.classList.add('is-uploading');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', zone.action);
+            xhr.setRequestHeader('X-Requested-With', 'fetch');
+            xhr.upload.onprogress = function (e) { if (e.lengthComputable) bar.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
+            xhr.onloadend = function () {
+                var res = null;
+                try { res = JSON.parse(xhr.responseText); } catch (err) { }
+                if (!res) alert('Tải lên thất bại. File có thể quá lớn.');
+                else if (res.errors.length) alert(res.errors.join('\n'));
+                location.reload();
+            };
+            xhr.send(data);
+        }
+        input.addEventListener('change', function () { send(input.files); });
+        ['dragenter', 'dragover'].forEach(function (t) { zone.addEventListener(t, function (e) { e.preventDefault(); zone.classList.add('is-drop'); }); });
+        ['dragleave', 'drop'].forEach(function (t) { zone.addEventListener(t, function (e) { e.preventDefault(); zone.classList.remove('is-drop'); }); });
+        zone.addEventListener('drop', function (e) { send(e.dataTransfer.files); });
+    </script>
+}

@@ -1,0 +1,87 @@
+﻿@model OrderDetailsViewModel
+@{var o=Model.Order;
+ViewData["Title"]="Đơn hàng #"+o.Id;}
+<a class="order-back" asp-action="Index"><i data-lucide="arrow-left" aria-hidden="true"></i>Lịch sử đơn hàng</a>
+<div class="page-heading order-heading">
+<div>
+<span class="eyebrow">CHI TIẾT ĐƠN HÀNG</span>
+<h1>Đơn hàng #@o.Id</h1>
+<div class="order-meta">
+    <span class="order-status @(o.Status == OrderStatus.Paid ? "is-paid" : o.Status == OrderStatus.Pending ? "is-pending" : "is-closed")"><i data-lucide="@(o.Status == OrderStatus.Paid ? "circle-check" : o.Status == OrderStatus.Pending ? "clock-3" : "circle-x")" aria-hidden="true"></i>@UiText.OrderStatus(o.Status)</span>
+    <span class="order-date"><i data-lucide="calendar-days" aria-hidden="true"></i>@o.CreatedAt.ToString("dd/MM/yyyy · HH:mm")</span>
+</div>
+</div>
+@if(o.Status == OrderStatus.Pending){<a class="button secondary order-refresh" asp-action="Details" asp-route-id="@o.Id"><i data-lucide="refresh-cw" aria-hidden="true"></i>Cập nhật trạng thái</a>}
+</div>
+<div class="checkout-grid order-details">
+<section class="panel">
+<div class="order-section-heading"><h2>Khóa học trong đơn</h2><span>@o.Items.Count khóa học</span></div>
+@foreach(var i in o.Items){var c=Model.Courses.GetValueOrDefault(i.CourseId);<div class="checkout-item order-course">
+<div>
+<h3>@(c?.Title??"Khóa học #"+i.CourseId)</h3>
+<small class="muted">Học phí sau giảm giá: @UiText.Price(i.Price)</small>
+</div>@if(o.Status==OrderStatus.Paid){<a class="button small order-learn" asp-controller="Learning" asp-action="Learn" asp-route-id="@i.CourseId"><i data-lucide="play" aria-hidden="true"></i>Vào học</a>}</div>}
+@if(o.Payments.Count > 0)
+{
+<div class="order-transactions">
+<h2>Giao dịch</h2>
+@if (o.Status == OrderStatus.Pending && o.Payments.Any(payment => payment.Status == "pending"))
+{
+    <form asp-action="CheckPayment" method="post">
+        <input type="hidden" name="id" value="@o.Id" />
+        <button class="button secondary">Kiểm tra với cổng thanh toán</button>
+    </form>
+}
+@foreach(var pay in o.Payments){
+@if(pay.IsTest){<p class="notice">Giao dịch mô phỏng: được ghi nhận trong sổ doanh thu mô phỏng, không phải tiền thật.</p>}
+<p class="order-transaction">@(pay.Gateway == "demo" ? "MÔ PHỎNG" : pay.Gateway.ToUpperInvariant()) · @UiText.PaymentStatus(pay.Status) · @UiText.Price(pay.Amount)</p>
+@if (o.Status == OrderStatus.Pending && pay.Status == "pending" && pay.PaymentUrl != null && pay.CreatedAt.AddMinutes(15) > DateTime.Now)
+{
+    <a class="button secondary" href="@pay.PaymentUrl">Mở lại cổng thanh toán</a>
+}
+}
+</div>
+}
+</section>
+<aside class="panel order-summary">
+<h2>Thông tin thanh toán</h2>
+<dl class="checkout-totals">
+<dt>Tạm tính</dt>
+<dd>@UiText.Price(o.Subtotal)</dd>
+<dt>Giảm giá</dt>
+<dd>@(o.DiscountAmount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))) ₫</dd>
+<dt class="order-total-label">Tổng thanh toán</dt>
+<dd>
+<strong class="order-total">@UiText.Price(o.TotalPrice)</strong>
+</dd>
+</dl>
+@if(o.Status==OrderStatus.Paid){<p class="notice success">@(o.Payments.Any(payment => payment.Gateway == "demo") ? "Đã thanh toán mô phỏng, không trừ tiền thật. Bạn có thể vào học các khóa trong đơn." : o.Payments.Any(payment => payment.IsTest) ? "Đơn thử nghiệm hoặc dữ liệu cũ chưa đối soát; không tính số dư tiền thật." : o.TotalPrice == 0 ? "Đăng ký miễn phí thành công. Bạn có thể vào học ngay." : "Thanh toán thành công. Bạn có thể vào học các khóa trong đơn.")</p>}
+else if(Model.CanPay && o.Payments.Count==0){
+if(Model.Gateways.Count==0 && !Model.DemoEnabled){<p class="notice" role="status">Thanh toán trực tuyến chưa được mở. Đơn hàng chưa trừ tiền và chưa cấp quyền học.</p>}
+else if (Model.Gateways.Count > 0) {<form asp-controller="Payment" asp-action="Start" method="post">
+<input type="hidden" name="id" value="@o.Id"/>
+<label for="gateway">Cổng thanh toán</label>
+<select id="gateway" name="gateway">@foreach(var g in Model.Gateways){<option value="@g">@g.ToUpperInvariant()</option>}</select>
+<p class="hint">Bạn sẽ được chuyển sang cổng thanh toán để xác nhận.</p>
+<button class="button">Thanh toán @UiText.Price(o.TotalPrice)</button>
+</form>}
+@if (Model.DemoEnabled)
+{
+    <div class="notice" role="status">
+        <strong>Thanh toán mô phỏng</strong>
+        <p>Chỉ dùng để demo đồ án, không trừ tiền thật. Xác nhận sẽ mở quyền học, cộng doanh thu và số dư mô phỏng cho giảng viên. Có thể thực hành rút tiền và thuế trong hệ thống.</p>
+    </div>
+    <a class="button" asp-action="DemoQr" asp-route-id="@o.Id">Thanh toán mô phỏng bằng QR</a>
+}
+<form asp-action="Cancel" method="post" data-confirm="Hủy đơn hàng này?">
+<input type="hidden" name="id" value="@o.Id"/>
+<button class="button secondary">Hủy đơn</button>
+</form>
+}else if(o.Status==OrderStatus.Pending){<p class="notice">@(o.Payments.Count>0?"Giao dịch đang chờ xác nhận từ cổng thanh toán. Nếu đã trừ tiền, giữ mã đơn để đối soát.":"Đơn đã hết hạn. Bạn có thể tạo đơn mới từ giỏ hàng.")</p>}
+@if (o.Status == OrderStatus.Pending && !Model.CanPay && o.Payments.Count == 0)
+{
+    <a class="button secondary" asp-controller="Cart" asp-action="Index">Tạo đơn mới từ giỏ hàng</a>
+}
+<p class="hint order-policy"><i data-lucide="shield-check" aria-hidden="true"></i>Không hoàn tiền sau khi mua khóa học.</p>
+</aside>
+</div>

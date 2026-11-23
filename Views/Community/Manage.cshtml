@@ -1,0 +1,6 @@
+﻿@model List<Lesson>
+@{ViewData["Title"]="Quản lý hỏi đáp";}
+@section Styles {<link rel="stylesheet" href="~/css/community.css" asp-append-version="true"/>}
+<div class="page-heading"><div><span class="eyebrow">TRAO ĐỔI VỚI HỌC VIÊN</span><h1>Quản lý hỏi đáp</h1><p class="muted">Chọn bài học để trả lời, ghim hoặc xử lý câu hỏi.</p></div></div>
+@if(Model.Count==0){<div class="cm-card">Chưa có bài học để quản lý.</div>}
+@foreach(var group in Model.GroupBy(l=>l.Section!.CourseId)){<section class="cm-card"><div class="cm-heading"><h2>@group.First().Section!.Course!.Title</h2><a asp-controller="Courses" asp-action="Details" asp-route-id="@group.Key" asp-fragment="reviews">Xem đánh giá</a></div>@foreach(var lesson in group){<a class="cm-lesson-link" asp-action="Lesson" asp-route-id="@lesson.Id"><span>@lesson.Section!.Title · @lesson.Title</span><i data-lucide="message-circle" aria-hidden="true"></i></a>}</section>}

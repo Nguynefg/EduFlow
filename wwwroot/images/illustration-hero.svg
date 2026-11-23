@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 460" fill="none">
+  <!-- Ảnh minh họa trang chủ: laptop đang phát bài giảng, các thẻ nổi (quiz, tiến độ, chứng nhận) -->
+  <circle cx="290" cy="220" r="190" fill="#eef3ff"/>
+  <circle cx="290" cy="220" r="140" fill="#dce6ff"/>
+  <!-- Laptop -->
+  <rect x="140" y="120" width="300" height="190" rx="14" fill="#14205a"/>
+  <rect x="152" y="132" width="276" height="166" rx="8" fill="#2747e0"/>
+  <circle cx="290" cy="200" r="34" fill="#fff" fill-opacity=".2"/>
+  <path d="M280 184l26 16-26 16z" fill="#fff"/>
+  <rect x="172" y="262" width="236" height="6" rx="3" fill="#fff" fill-opacity=".25"/>
+  <rect x="172" y="262" width="150" height="6" rx="3" fill="#fbbf24"/>
+  <rect x="172" y="146" width="90" height="10" rx="5" fill="#fff" fill-opacity=".5"/>
+  <path d="M110 310h360l-24 26H134z" fill="#1f2d7a"/>
+  <rect x="256" y="310" width="68" height="8" rx="4" fill="#0d1640"/>
+  <!-- Thẻ quiz -->
+  <g>
+    <rect x="30" y="160" width="140" height="104" rx="14" fill="#fff"/>
+    <rect x="46" y="176" width="70" height="9" rx="4.5" fill="#0f172a"/>
+    <circle cx="52" cy="204" r="6" fill="#10b981"/><path d="M49 204l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <rect x="64" y="200" width="80" height="8" rx="4" fill="#dce6ff"/>
+    <circle cx="52" cy="224" r="6" fill="#10b981"/><path d="M49 224l2 2 4-4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    <rect x="64" y="220" width="64" height="8" rx="4" fill="#dce6ff"/>
+    <circle cx="52" cy="244" r="6" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="64" y="240" width="72" height="8" rx="4" fill="#dce6ff"/>
+  </g>
+  <!-- Thẻ tiến độ -->
+  <g>
+    <rect x="400" y="64" width="140" height="92" rx="14" fill="#fff"/>
+    <rect x="416" y="80" width="60" height="8" rx="4" fill="#64748b"/>
+    <text x="416" y="118" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#0f172a">75%</text>
+    <rect x="416" y="132" width="108" height="8" rx="4" fill="#dce6ff"/>
+    <rect x="416" y="132" width="81" height="8" rx="4" fill="#2747e0"/>
+  </g>
+  <!-- Thẻ chứng nhận -->
+  <g>
+    <rect x="392" y="300" width="150" height="88" rx="14" fill="#fff"/>
+    <circle cx="424" cy="332" r="16" fill="#fef3c7"/>
+    <path d="M424 322l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#f59e0b"/>
+    <rect x="448" y="324" width="76" height="8" rx="4" fill="#0f172a"/>
+    <rect x="448" y="338" width="56" height="7" rx="3.5" fill="#cbd5e1"/>
+    <rect x="410" y="362" width="114" height="10" rx="5" fill="#10b981" fill-opacity=".2"/>
+  </g>
+  <!-- Trang trí -->
+  <path d="M96 84l6 14 14 6-14 6-6 14-6-14-14-6 14-6z" fill="#fbbf24"/>
+  <path d="M500 220l4 9 9 4-9 4-4 9-4-9-9-4 9-4z" fill="#6088fb"/>
+  <circle cx="120" cy="380" r="8" fill="#10b981"/>
+  <circle cx="370" cy="40" r="6" fill="#f59e0b"/>
+</svg>

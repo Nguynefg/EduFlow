@@ -1,0 +1,14 @@
+TÀI LIỆU MẪU - EDUFLOW
+=======================
+
+Đây là file tài liệu đính kèm dùng cho dữ liệu mẫu (docs/02_seed_demo.sql).
+
+Lộ trình học:
+  Chương 1: Giới thiệu
+  Chương 2: Kiến thức nền tảng
+  Chương 3: Thực hành và kiểm tra
+
+Mẹo học tốt:
+  - Học đều đặn mỗi ngày 30 phút.
+  - Ghi chép lại ý chính sau mỗi bài.
+  - Làm bài kiểm tra cuối chương để chắc kiến thức.

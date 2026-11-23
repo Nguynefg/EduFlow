@@ -1,0 +1,3 @@
+﻿@model EduFlow.Web.Helpers.PreviewMail
+@{ViewData["Title"]=Model.Subject;}
+<a asp-action="Index">← Hộp thư mô phỏng</a><section class="panel" style="margin-top:20px"><span class="eyebrow">EMAIL MÔ PHỎNG</span><h1>@Model.Subject</h1><p class="muted">Đến @Model.To · @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit">@Model.Body</pre>@foreach(string link in ViewBag.Links){<a class="button" href="@link">Mở liên kết trong email</a>}</section>

@@ -1,0 +1,11 @@
+﻿@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+
+    if (controller == "Password" || (controller == "Account" && action != "AccessDenied"))
+        Layout = "_AuthLayout";          // Đăng nhập, đăng ký, quên mật khẩu: bố cục chia đôi
+    else if (controller is "Profile" or "Kyc" or "Instructor" or "Curriculum" or "Media" or "Cart" or "Orders" or "Finance" or "Community" or "Dashboard" or "Mailbox" || (controller == "Learning" && action == "Index"))
+        Layout = "_PortalLayout";        // Trang tài khoản và Studio giảng viên
+    else
+        Layout = "_Layout";
+}

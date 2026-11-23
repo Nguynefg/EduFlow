@@ -1,0 +1,71 @@
+﻿@model AdminDashboardViewModel
+@{ ViewData["Title"] = "Tổng quan"; }
+
+<div class="admin-heading">
+    <div>
+        <span class="eyebrow">TRUNG TÂM QUẢN TRỊ</span>
+        <h1>Tổng quan hệ thống</h1>
+        <p class="muted">Theo dõi tài khoản và xử lý hồ sơ giảng viên đang chờ.</p>
+    </div>
+</div>
+
+<partial name="~/Views/Shared/_AdminReport.cshtml" model="Model.Report"/>
+
+<div class="admin-kpis">
+    <a class="panel admin-kpi" asp-controller="Users" asp-action="Index">
+        <div><span>Tài khoản</span><i data-lucide="users"></i></div>
+        <strong>@Model.TotalUsers</strong>
+        <p>+@Model.NewThisWeek tài khoản mới trong 7 ngày</p>
+    </a>
+    <article class="panel admin-kpi">
+        <div><span>Học viên / Giảng viên</span><i data-lucide="graduation-cap"></i></div>
+        <strong>@Model.Students / @Model.Instructors</strong>
+        <p>@Model.Admins quản trị viên</p>
+    </article>
+    <article class="panel admin-kpi">
+        <div><span>Bị khóa / Đã xóa</span><i data-lucide="lock-keyhole"></i></div>
+        <strong>@Model.Locked / @Model.Deleted</strong>
+        <p>Tài khoản không đăng nhập được</p>
+    </article>
+    <a class="panel admin-kpi admin-kpi-attention" asp-controller="Kyc" asp-action="Index">
+        <div><span>Hồ sơ giảng viên chờ duyệt</span><i data-lucide="user-check"></i></div>
+        <strong>@Model.PendingKyc</strong>
+        <p>@(Model.PendingKyc > 0 ? "Cần xét duyệt ngay" : "Đã xử lý hết")</p>
+    </a>
+</div>
+
+<section class="panel admin-section">
+    <div class="admin-section-heading">
+        <div class="admin-section-title">
+            <span class="admin-task-icon"><i data-lucide="user-plus"></i></span>
+            <div><h2>Tài khoản mới đăng ký</h2><p class="muted">Những tài khoản vừa tạo gần đây.</p></div>
+        </div>
+        <a asp-controller="Users" asp-action="Index" class="admin-table-link inline-flex items-center gap-1">Xem tất cả<i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+    </div>
+    <div class="table-wrap">
+        <table class="admin-compact-table">
+            <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Ngày tạo</th></tr></thead>
+            <tbody>
+                @foreach (var u in Model.RecentUsers)
+                {
+                    <tr>
+                        <td>
+                            <div class="admin-user-cell">
+                                <span class="admin-user-avatar">@u.FullName.FirstOrDefault()</span>
+                                <div><strong class="admin-cell-title">@u.FullName</strong><small class="admin-cell-sub">@u.Email</small></div>
+                            </div>
+                        </td>
+                        <td>@foreach (var r in u.RoleCodes) { <span class="badge admin-role-badge">@UiText.Role(r)</span> }</td>
+                        <td class="nowrap"><span class="admin-cell-date">@u.CreatedAt.ToString("dd/MM/yyyy")<small>@u.CreatedAt.ToString("HH:mm")</small></span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.RecentUsers.Count == 0)
+        {
+            <div class="admin-empty"><i data-lucide="user-round-x"></i><h3>Chưa có tài khoản nào</h3></div>
+        }
+    </div>
+</section>
+
+@section Styles {<link rel="stylesheet" href="~/css/reports.css" asp-append-version="true"/>}

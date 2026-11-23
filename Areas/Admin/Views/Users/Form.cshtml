@@ -1,0 +1,67 @@
+@model AdminUserFormViewModel
+@{
+    var isEdit = Model.Id != null;
+    ViewData["Title"] = isEdit ? "Sửa tài khoản" : "Thêm tài khoản";
+}
+
+<a asp-action="Index" class="admin-table-link inline-flex items-center gap-1"><i data-lucide="arrow-left" class="w-4 h-4"></i>Quản lý tài khoản</a>
+<div class="admin-heading mt-5">
+    <div>
+        <span class="eyebrow">QUẢN LÝ NGƯỜI DÙNG</span>
+        <h1>@ViewData["Title"]</h1>
+    </div>
+</div>
+
+<section class="panel admin-form-panel">
+    <form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@Model.Id" method="post">
+        <div asp-validation-summary="ModelOnly" class="validation"></div>
+        <div class="admin-account-fields">
+            <div>
+                <label asp-for="FullName"></label>
+                <input asp-for="FullName" />
+                <span asp-validation-for="FullName" class="validation"></span>
+            </div>
+            <div>
+                <label asp-for="Email"></label>
+                <input asp-for="Email" autocomplete="off" />
+                <span asp-validation-for="Email" class="validation"></span>
+            </div>
+            <div>
+                <label asp-for="PhoneNumber"></label>
+                <input asp-for="PhoneNumber" />
+                <span asp-validation-for="PhoneNumber" class="validation"></span>
+            </div>
+            <div>
+                <label>Vai trò</label>
+                <div class="admin-role-options">
+                @foreach (var role in AppRoles.All)
+                {
+                    <label class="checkbox">
+                        <input type="checkbox" name="Roles" value="@role" checked="@Model.Roles.Contains(role)" /> @UiText.Role(role)
+                    </label>
+                }
+                </div>
+                <span asp-validation-for="Roles" class="validation"></span>
+            </div>
+            <div class="admin-field-wide">
+                <label asp-for="Bio"></label>
+                <textarea asp-for="Bio" rows="3"></textarea>
+            </div>
+            <div>
+                <label asp-for="Password">@(isEdit ? "Mật khẩu mới (bỏ trống nếu giữ nguyên)" : "Mật khẩu ban đầu")</label>
+                <input asp-for="Password" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="validation"></span>
+            </div>
+            <div>
+                <label asp-for="ConfirmPassword"></label>
+                <input asp-for="ConfirmPassword" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="validation"></span>
+            </div>
+        </div>
+        <p class="hint">Mật khẩu ít nhất 10 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.</p>
+        <div class="admin-account-actions">
+            <a asp-action="Index" class="button secondary">Hủy</a>
+            <button class="button"><i data-lucide="@(isEdit ? "save" : "user-plus")" class="w-4 h-4"></i>@(isEdit ? "Lưu thay đổi" : "Tạo tài khoản")</button>
+        </div>
+    </form>
+</section>

@@ -1,0 +1,32 @@
+@model Coupon
+@{ViewData["Title"]="Cài đặt mã giảm giá";}
+<a asp-action="Index">← Mã giảm giá</a>
+<section class="panel narrow">
+<h1>@ViewData["Title"]</h1>
+<form method="post">
+<div asp-validation-summary="All" class="validation" role="alert" tabindex="-1">
+</div>
+<input type="hidden" asp-for="Id"/>
+<label asp-for="Code">Mã giảm giá</label>
+<input asp-for="Code" maxlength="50" required/>
+<label asp-for="DiscountType">Loại giảm</label>
+<select asp-for="DiscountType">
+<option value="percent">Phần trăm</option>
+<option value="fixed">Số tiền VND</option>
+</select>
+<label asp-for="DiscountValue">Mức giảm</label>
+<input asp-for="DiscountValue" type="number" min="1" step="1" required/>
+<label asp-for="MaxDiscount">Giảm tối đa (VND, để trống nếu không giới hạn)</label>
+<input asp-for="MaxDiscount" type="number" min="1" step="1"/>
+<label asp-for="TotalLimit">Giới hạn tổng lượt dùng</label>
+<input asp-for="TotalLimit" type="number" min="1"/>
+<label asp-for="StartDate">Bắt đầu</label>
+<input asp-for="StartDate" type="datetime-local" required/>
+<label asp-for="EndDate">Kết thúc</label>
+<input asp-for="EndDate" type="datetime-local" required/>
+<label>
+<input asp-for="IsActive"/> Bật mã</label>
+<p class="hint">Mã đã gắn với đơn hàng chỉ được bật/tắt. Tạo mã mới để đổi điều kiện.</p>
+<button class="button">Lưu mã giảm giá</button>
+</form>
+</section>

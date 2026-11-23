@@ -1,0 +1,9 @@
+@model List<CourseReview>
+@{ViewData["Title"]="Kiểm duyệt đánh giá";int currentPage=ViewBag.Page,pages=ViewBag.Pages;bool? hidden=ViewBag.Hidden;}
+@section Styles {<link rel="stylesheet" href="~/css/community.css" asp-append-version="true"/>}
+<div class="currentPage-heading"><h1>Kiểm duyệt đánh giá</h1><a class="button secondary" asp-area="" asp-controller="Community" asp-action="Manage">Quản lý hỏi đáp</a></div>
+<form method="get" class="cm-card cm-search"><label for="hidden">Trạng thái</label><div><select id="hidden" name="hidden"><option value="">Tất cả</option><option value="false" selected="@(hidden==false)">Đang hiển thị</option><option value="true" selected="@(hidden==true)">Đã ẩn</option></select><button class="button">Lọc</button></div></form>
+@foreach(var review in Model){<article class="cm-card"><div class="cm-heading"><h2>@review.Course?.Title</h2><span class="cm-badge">@(review.IsHidden?"Đã ẩn":"Hiển thị")</span></div><p>@review.User?.FullName · @review.Rating / 5 sao · @review.CreatedAt.ToString("dd/MM/yyyy")</p><p class="cm-text">@review.Comment</p><form asp-action="Hide" method="post"><input type="hidden" name="courseId" value="@review.CourseId"/><input type="hidden" name="reviewerId" value="@review.UserId"/><input type="hidden" name="hidden" value="@((!review.IsHidden).ToString().ToLowerInvariant())"/><button class="button secondary">@(review.IsHidden?"Hiển thị lại":"Ẩn đánh giá")</button></form></article>}
+@if(Model.Count==0){<section class="cm-card">Chưa có đánh giá phù hợp.</section>}
+<nav class="cm-pages" aria-label="Trang kiểm duyệt">@if(currentPage>1){<a asp-route-hidden="@hidden" asp-route-page="@(currentPage-1)">Trang trước</a>}<span>@currentPage / @pages</span>@if(currentPage<pages){<a asp-route-hidden="@hidden" asp-route-page="@(currentPage+1)">Trang sau</a>}</nav>
+

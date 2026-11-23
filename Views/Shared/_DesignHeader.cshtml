@@ -1,0 +1,55 @@
+@* Thanh thông báo trên cùng (chỉ trang nào đặt ViewData["Announcement"] = true) *@
+@if (ViewData["Announcement"] is true)
+{
+    <div id="announcementBar" class="bg-blue-50 dark:bg-slate-900 border-b border-blue-100 dark:border-slate-800 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-2 relative">
+            <span>Thành viên mới: đăng ký miễn phí và học thử các bài học ngay hôm nay!</span>
+            <a href="/Account/Register" class="font-bold text-blue-600 hover:underline">Đăng ký ngay</a>
+            <button type="button" class="absolute right-4 text-slate-400 hover:text-slate-700" aria-label="Đóng thông báo"
+                    onclick="document.getElementById('announcementBar').remove()">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+}
+
+<header class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 transition-all">
+    <div class="site-header max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[76px] py-3 flex items-center gap-4 lg:gap-8">
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2.5 flex-shrink-0 group">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-sky-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25 group-hover:scale-105 transition">
+                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xl font-black tracking-tight text-slate-900 group-hover:text-blue-600 transition">Edu<span class="text-blue-600">Flow</span></span>
+        </a>
+
+        <!-- Menu chính (giữa) -->
+        @{ var controller = ViewContext.RouteData.Values["controller"]?.ToString(); var action = ViewContext.RouteData.Values["action"]?.ToString(); }
+        <nav class="site-nav hidden lg:flex items-center gap-6 mx-auto">
+            <a href="/" class="@(controller == "Home" && action == "Index" ? "is-active" : "")">Trang chủ</a>
+            @await Component.InvokeAsync("CategoryMenu")
+            <a href="/Home/Teach" class="@(action == "Teach" || controller == "Kyc" ? "is-active" : "")">Dạy học</a>
+            <a href="/Home/About" class="@(action == "About" ? "is-active" : "")">Về chúng tôi</a>
+            <a href="/Home/Contact" class="@(action == "Contact" ? "is-active" : "")">Liên hệ</a>
+        </nav>
+
+        <!-- Ô tìm kiếm -->
+        <form action="/Courses" method="get" class="hidden xl:flex w-56 items-center relative">
+            <input name="q" value="@Context.Request.Query["q"]" type="search" placeholder="Tìm khóa học..."
+                   class="w-full pl-4 pr-10 py-2.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" />
+            <button class="absolute right-3 text-slate-500 hover:text-blue-600" aria-label="Tìm kiếm">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </button>
+        </form>
+
+        <!-- Nút sáng/tối + tài khoản -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto lg:ml-0">
+            <button id="themeToggleBtn" type="button" data-ui-action="toggle-theme" title="Chuyển chế độ Sáng / Tối" aria-label="Chuyển chế độ Sáng / Tối"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-700 transition">
+                <i id="themeToggleIcon" data-lucide="moon" class="w-4 h-4 text-blue-600"></i>
+                <span id="themeToggleText" class="sr-only">Tối</span>
+            </button>
+            @await Component.InvokeAsync("AuthActions")
+        </div>
+    </div>
+</header>

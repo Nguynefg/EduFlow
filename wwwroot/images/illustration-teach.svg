@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" fill="none">
+  <!-- Ảnh minh họa giảng viên: bảng giảng dạy, biểu đồ doanh thu, micro -->
+  <circle cx="220" cy="160" r="130" fill="#fff" fill-opacity=".12"/>
+  <rect x="70" y="50" width="250" height="160" rx="14" fill="#fff"/>
+  <rect x="86" y="66" width="110" height="10" rx="5" fill="#1f2d7a"/>
+  <rect x="86" y="84" width="80" height="8" rx="4" fill="#bfd0ff"/>
+  <rect x="96" y="160" width="22" height="34" rx="4" fill="#93b0ff"/>
+  <rect x="128" y="140" width="22" height="54" rx="4" fill="#6088fb"/>
+  <rect x="160" y="124" width="22" height="70" rx="4" fill="#3b63f2"/>
+  <rect x="192" y="104" width="22" height="90" rx="4" fill="#2747e0"/>
+  <path d="M96 132l40-18 30 8 50-30" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="216" cy="92" r="6" fill="#f59e0b"/>
+  <rect x="236" y="104" width="70" height="90" rx="10" fill="#eef3ff"/>
+  <circle cx="271" cy="134" r="18" fill="#2747e0"/>
+  <path d="M265 126l14 8-14 8z" fill="#fff"/>
+  <rect x="248" y="164" width="46" height="7" rx="3.5" fill="#93b0ff"/>
+  <rect x="190" y="210" width="10" height="44" fill="#fff" fill-opacity=".7"/>
+  <rect x="150" y="252" width="90" height="10" rx="5" fill="#fff" fill-opacity=".7"/>
+  <!-- Micro -->
+  <rect x="338" y="150" width="24" height="44" rx="12" fill="#fbbf24"/>
+  <path d="M330 182c0 16 12 26 20 26s20-10 20-26" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <rect x="348" y="208" width="4" height="22" fill="#fff"/>
+  <path d="M40 90l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#fbbf24"/>
+  <path d="M370 60l4 9 9 4-9 4-4 9-4-9-9-4 9-4z" fill="#fff"/>
+</svg>

@@ -1,0 +1,353 @@
+﻿@model LearnViewModel
+@{
+    var course = Model.Course;
+    var lesson = Model.Lesson;
+    ViewData["Title"] = lesson.Title + " · " + course.Title;
+    var sections = course.Sections.OrderBy(s => s.OrderIndex).ToList();
+    var totalSec = Model.Lessons.Sum(l => l.DurationSec);
+    var currentSection = sections.First(s => s.Id == lesson.SectionId);
+    var sectionNo = sections.IndexOf(currentSection) + 1;
+    var lessonNo = currentSection.Lessons.OrderBy(l => l.OrderIndex).ToList().IndexOf(lesson) + 1;
+    var done = Model.IsCompleted(lesson.Id);
+    var progress = Model.CurrentProgress;
+    var resumePosition = Model.StartAt ?? ((progress?.LastPositionSec ?? 0) >= Math.Max(1,lesson.DurationSec-2) ? 0 : progress?.LastPositionSec ?? 0);
+    var youtube = VideoHelper.YouTubeEmbed(lesson.VideoUrl);
+    var nextLocked = Model.Next != null && !done && lesson.LessonType != LessonType.Article;
+    var questions = lesson.Questions.OrderBy(q => q.OrderIndex).ToList();
+    var result = Model.QuizResult;
+    var instructor = course.Instructor;
+
+    string StatusIcon(Lesson l) => Model.IsCompleted(l.Id) ? "circle-check" : Model.LockedLessonIds.Contains(l.Id) ? "lock" : l.Id == lesson.Id ? "circle-play" : l.LessonType == LessonType.Quiz ? "list-checks" : l.LessonType == LessonType.Article ? "file-text" : "play";
+    string Length(int sec)
+    {
+        var t = TimeSpan.FromSeconds(sec);
+        return t.TotalHours >= 1 ? $"{(int)t.TotalHours}h {t.Minutes}m" : $"{Math.Max(1, (int)Math.Round(t.TotalMinutes))} phút";
+    }
+}
+
+<!-- ===== THANH TIÊU ĐỀ ===== -->
+<div class="lr-top">
+    <a class="lr-back" asp-controller="Learning" asp-action="Index" data-tip="Khóa học đã mua" aria-label="Về khóa học đã mua"><i data-lucide="chevron-left"></i></a>
+    <div class="lr-top-text">
+        <nav class="lr-crumbs">
+            <a asp-controller="Learning" asp-action="Index">Khóa học đã mua</a><span>/</span>
+            <a asp-controller="Courses" asp-action="Details" asp-route-id="@course.Id">@course.Title</a>
+        </nav>
+        <h1>@course.Title <span class="lr-chip">@course.Category?.Name</span></h1>
+        <div class="lr-meta">
+            <span><i data-lucide="circle-play"></i>@Model.Lessons.Count bài học</span>
+            @if (totalSec > 0) { <span><i data-lucide="clock-3"></i>@Length(totalSec)</span> }
+            <span><i data-lucide="star"></i>@(course.AvgRating > 0 ? course.AvgRating.ToString("0.0") : "Mới")</span>
+            <span><i data-lucide="users"></i>@Model.StudentCount học viên</span>
+        </div>
+    </div>
+    <div class="lr-top-progress">
+        <span class="lr-ring" style="--p:@Model.Percent" data-course-ring><b data-course-percent>@Model.Percent%</b></span>
+        <div>
+            <strong>Tiến độ</strong>
+            <small><span data-course-done>@Model.CompletedCount</span>/@Model.Lessons.Count bài đã xong</small>
+        </div>
+    </div>
+</div>
+
+<div class="lr-layout">
+    <!-- ===== CỘT TRÁI: bài học ===== -->
+    <div class="lr-main">
+        @if (lesson.LessonType == LessonType.Video)
+        {
+            <div class="lr-stage">
+                @if (youtube != null)
+                {
+                    <iframe id="lessonYoutube" data-youtube="@youtube" src="@(youtube)?enablejsapi=1&rel=0&start=@resumePosition" title="@lesson.Title" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                }
+                else if (!string.IsNullOrEmpty(lesson.VideoUrl))
+                {
+                    <video src="@Url.Action("Lesson","MediaStream",new{id=lesson.Id})" controls controlslist="nodownload" playsinline data-lesson-video
+                           data-resume="@resumePosition"></video>
+                }
+                else
+                {
+                    <div class="lr-stage-empty"><i data-lucide="video-off"></i>Bài học chưa có video.</div>
+                }
+            </div>
+        }
+
+        @if (lesson.LessonType == LessonType.Video) {
+<div class="lr-save-strip"><div><p data-watch-status>@(done ? "Bài học đã hoàn thành." : $"Đã xem {Math.Min(100, (progress?.WatchedSec ?? 0)*100/Math.Max(1,lesson.DurationSec))}% video · cần 80% để hoàn thành bài.")</p><span data-save-state role="status" aria-live="polite">@(progress?.UpdatedAt != null ? $"Vị trí đã lưu: {UiText.Duration(progress.LastPositionSec)} · {progress.UpdatedAt:dd/MM HH:mm}" : "Tiến độ được tự động lưu khi học.")</span></div><button type="button" class="lr-btn ghost small" data-save-now>Lưu tiến độ</button></div>
+}
+<!-- Tên bài + điều hướng -->
+        <div class="lr-lesson-bar">
+            <div class="min-w-0">
+                <span class="lr-eyebrow">Chương @sectionNo · Bài @lessonNo · @UiText.LessonType(lesson.LessonType)</span>
+                <h2>@lesson.Title</h2>
+            </div>
+            <div class="lr-nav">
+                @if (Model.Previous != null)
+                {
+                    <a class="lr-btn ghost" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@Model.Previous.Id" data-tip="@Model.Previous.Title"><i data-lucide="arrow-left"></i><span>Bài trước</span></a>
+                }
+                @if (lesson.LessonType == LessonType.Article)
+                {
+                    if (done)
+                    {
+                        <span class="lr-done-pill" data-done-pill><i data-lucide="circle-check"></i>Đã hoàn thành</span>
+                    }
+                    else
+                    {
+                        <button type="submit" form="completeForm" class="lr-btn @(Model.Next == null ? "" : "ghost")" data-complete-btn>
+                            <i data-lucide="check"></i><span>@(Model.Next == null ? "Hoàn thành khóa học" : "Đánh dấu hoàn thành")</span>
+                        </button>
+                    }
+                }
+                @if (Model.Next != null)
+                {
+                    if (nextLocked)
+                    {
+                        <span class="lr-btn is-disabled" data-next-locked data-tip="Hoàn thành bài hiện tại để mở khóa bài tiếp theo"><i data-lucide="lock"></i><span>Bài tiếp</span></span>
+                    }
+                    else if (done || lesson.LessonType == LessonType.Quiz)
+                    {
+                        <a class="lr-btn" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@Model.Next.Id" data-next-link><span>Bài tiếp</span><i data-lucide="arrow-right"></i></a>
+                    }
+                    else
+                    {
+                        @* Chưa xong: "Bài tiếp" = hoàn thành bài này rồi chuyển sang bài sau *@
+                        <button type="submit" form="completeForm" name="nextLessonId" value="@Model.Next.Id" class="lr-btn" data-tip="Hoàn thành bài này và học tiếp"><span>Bài tiếp</span><i data-lucide="arrow-right"></i></button>
+                    }
+                }
+            </div>
+        </div>
+
+        <form id="completeForm" asp-action="Complete" asp-route-id="@course.Id" method="post" hidden data-complete-form
+              data-position-url="@Url.Action("Position")" data-start-url="@Url.Action("StartVideo")" data-initial-completed="@(done ? "true" : "false")" data-resume="@resumePosition" data-watched="@(progress?.WatchedSec??0)" data-duration="@lesson.DurationSec" data-next-id="@Model.Next?.Id" data-next-url="@(Model.Next==null?"":Url.Action("Learn",new{id=course.Id,lessonId=Model.Next.Id}))">
+            <input type="hidden" name="lessonId" value="@lesson.Id" />
+        </form>
+
+        @if (lesson.LessonType == LessonType.Article)
+        {
+            <article class="lr-panel lr-article rich-content">@RichText.Render(VideoHelper.ProtectHtml(lesson.Content,Url.Action("Attachment","MediaStream",new{lessonId=lesson.Id})!))</article>
+        }
+
+        @if (lesson.LessonType == LessonType.Quiz)
+        {
+            <section class="lr-panel lr-quiz">
+                <div class="lr-quiz-head">
+                    <span class="lr-quiz-icon"><i data-lucide="list-checks"></i></span>
+                    <div>
+                        <strong>Bài kiểm tra · @questions.Count câu hỏi</strong>
+                        <small>Cần đạt tối thiểu <b>@(lesson.PassScore ?? 70)%</b> để mở khóa bài tiếp theo.@if (progress?.QuizScore != null) { <text> Điểm cao nhất của bạn: <b>@progress.QuizScore%</b>.</text> }</small>
+                    </div>
+                </div>
+
+                @if (result != null)
+                {
+                    <div class="lr-result @(result.Passed ? "is-pass" : "is-fail")" role="status">
+                        <span class="lr-result-score">@result.Score%</span>
+                        <div>
+                            <strong>@(result.Passed ? "Chúc mừng, bạn đã đạt!" : "Chưa đạt, hãy thử lại nhé")</strong>
+                            <small>Đúng @result.CorrectCount/@result.Total câu · Yêu cầu @result.PassScore%</small>
+                        </div>
+                        @if (result.Passed && Model.Next != null)
+                        {
+                            <a class="lr-btn" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@Model.Next.Id">Học bài tiếp<i data-lucide="arrow-right"></i></a>
+                        }
+                    </div>
+                }
+                else if (done)
+                {
+                    <div class="lr-result is-pass" role="status">
+                        <span class="lr-result-score">@(progress?.QuizScore ?? 100)%</span>
+                        <div><strong>Bạn đã vượt qua bài kiểm tra này</strong><small>Có thể làm lại để ôn tập — điểm cao nhất được giữ lại.</small></div>
+                    </div>
+                }
+
+                @if (questions.Count == 0)
+                {
+                    <p class="muted">Bài kiểm tra chưa có câu hỏi.</p>
+                }
+                else
+                {
+                    <form asp-action="SubmitQuiz" asp-route-id="@course.Id" method="post" class="lr-questions" data-quiz-form>
+                        <input type="hidden" name="lessonId" value="@lesson.Id" />
+                        @for (var i = 0; i < questions.Count; i++)
+                        {
+                            var q = questions[i];
+                            var answer = result?.Answers.GetValueOrDefault(q.Id);
+                            var options = q.Options.OrderBy(o => o.Id).ToList();
+                            <fieldset class="lr-question @(answer == null ? "" : answer.IsCorrect ? "is-correct" : "is-wrong")">
+                                <legend>
+                                    <span class="lr-qno">Câu @(i + 1)</span>
+                                    @if (answer != null)
+                                    {
+                                        <span class="lr-qmark"><i data-lucide="@(answer.IsCorrect ? "check" : "x")"></i>@(answer.IsCorrect ? "Đúng" : "Sai")</span>
+                                    }
+                                </legend>
+                                <p class="lr-qtext">@q.QuestionText</p>
+                                @if (q.QuestionType == "fill")
+                                {
+                                    <input type="text" name="answers[@q.Id]" value="@answer?.Given" maxlength="500" autocomplete="off" placeholder="Nhập câu trả lời..." class="lr-fill" />
+                                    @if (answer != null && !answer.IsCorrect && result!.Passed)
+                                    {
+                                        <small class="lr-hint">Đáp án: @string.Join(" / ", options.Select(o => o.OptionText))</small>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="lr-options">
+                                        @for (var k = 0; k < options.Count; k++)
+                                        {
+                                            var o = options[k];
+                                            var picked = answer?.Given == o.Id.ToString();
+                                            var showRight = result != null && result.Passed && o.IsCorrect;
+                                            <label class="lr-option @(picked ? (answer!.IsCorrect ? "is-right" : "is-wrong") : "") @(showRight ? "is-right" : "")">
+                                                <input type="radio" name="answers[@q.Id]" value="@o.Id" checked="@picked" />
+                                                <span class="lr-letter">@((char)('A' + k))</span>
+                                                <span>@o.OptionText</span>
+                                            </label>
+                                        }
+                                    </div>
+                                }
+                            </fieldset>
+                        }
+                        <div class="lr-quiz-actions">
+                            <small class="muted" data-quiz-count></small>
+                            <button class="lr-btn"><i data-lucide="send"></i>@(result != null || done ? "Nộp lại bài" : "Nộp bài")</button>
+                        </div>
+                    </form>
+                }
+            </section>
+        }
+
+        <!-- ===== TAB THÔNG TIN ===== -->
+        <div class="lr-tabs" role="tablist">
+            <button type="button" role="tab" class="is-active" data-tab="overview">Tổng quan</button>
+            <button type="button" role="tab" data-tab="resources">Tài liệu @if (lesson.Resources.Count > 0) { <em>@lesson.Resources.Count</em> }</button>
+            <button type="button" role="tab" data-tab="qa">Hỏi đáp</button>
+            <button type="button" role="tab" data-tab="author">Giảng viên</button>
+        </div>
+
+        <section class="lr-panel" data-tab-panel="overview">
+            <h3>Giới thiệu khóa học</h3>
+            @if (!string.IsNullOrEmpty(course.ShortDesc)) { <p class="lr-lead">@course.ShortDesc</p> }
+            @if (!string.IsNullOrEmpty(course.Description)) { <div class="rich-content lr-rich">@RichText.Render(course.Description)</div> }
+            @if (!string.IsNullOrEmpty(course.Objectives))
+            {
+                <h3>Bạn sẽ học được gì</h3>
+                <ul class="lr-checklist">
+                    @foreach (var line in course.Objectives.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        <li><i data-lucide="circle-check"></i>@line</li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="lr-panel" data-tab-panel="resources" hidden>
+            <h3>Tài liệu của bài học</h3>
+            @if (lesson.Resources.Count == 0)
+            {
+                <p class="muted">Bài học này không có tài liệu đính kèm.</p>
+            }
+            else
+            {
+                <ul class="lr-files">
+                    @foreach (var r in lesson.Resources)
+                    {
+                        <li>
+                            <span class="lr-file-icon"><i data-lucide="file-down"></i></span>
+                            <span class="min-w-0"><b>@r.FileName</b><small>@(r.FileSize / 1024) KB</small></span>
+                            <a asp-area="" asp-controller="MediaStream" asp-action="Resource" asp-route-id="@r.Id" class="lr-btn ghost small"><i data-lucide="download"></i>Tải về</a>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="lr-panel" data-tab-panel="qa" hidden>@if(Model.Discussions!=null){<partial name="_LessonDiscussions" model="Model.Discussions"/>}</section>
+
+        <section class="lr-panel" data-tab-panel="author" hidden>
+            <div class="lr-author">
+                @if (!string.IsNullOrEmpty(instructor?.AvatarUrl)) { <img src="@instructor.AvatarUrl" alt="" /> }
+                else { <span class="lr-avatar">@instructor?.FullName.FirstOrDefault()</span> }
+                <div>
+                    <strong>@instructor?.FullName</strong>
+                    @if (!string.IsNullOrEmpty(instructor?.InstructorProfile?.Headline)) { <small>@instructor.InstructorProfile.Headline</small> }
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(instructor?.Bio)) { <p class="preserve lr-bio">@instructor.Bio</p> }
+        </section>
+    </div>
+
+    <!-- ===== CỘT PHẢI: nội dung khóa học ===== -->
+    <aside class="lr-side">
+        <div class="lr-outline">
+            <div class="lr-outline-head">
+                <strong>Nội dung khóa học</strong>
+                <small><span data-course-done>@Model.CompletedCount</span>/@Model.Lessons.Count</small>
+            </div>
+            <div class="lr-outline-bar"><i style="width:@Model.Percent%" data-course-bar></i></div>
+            @{ var no = 0; }
+            @foreach (var chap in sections)
+            {
+                no++;
+                var items = chap.Lessons.OrderBy(l => l.OrderIndex).ToList();
+                var secDone = items.Count(l => Model.IsCompleted(l.Id));
+                <details class="lr-chapter" open="@(chap.Id == lesson.SectionId)">
+                    <summary>
+                        <span class="lr-chapter-title">@no.ToString("00"): @chap.Title</span>
+                        <small>@(items.Sum(l => l.DurationSec) > 0 ? Length(items.Sum(l => l.DurationSec)) : secDone + "/" + items.Count)</small>
+                        <i data-lucide="chevron-down" class="lr-caret"></i>
+                    </summary>
+                    <ul>
+                        @foreach (var l in items)
+                        {
+                            var isCurrent = l.Id == lesson.Id;
+                            var isLocked = Model.LockedLessonIds.Contains(l.Id);
+                            var cls = (isCurrent ? "is-current " : "") + (Model.IsCompleted(l.Id) ? "is-done " : "") + (isLocked ? "is-locked" : "");
+                            <li class="@cls" data-outline-lesson="@l.Id">
+                                @if (isLocked)
+                                {
+                                    <span class="lr-item" data-lesson-url="@Url.Action("Learn",new{id=course.Id,lessonId=l.Id})" data-tip="Hoàn thành bài trước để mở khóa">
+                                        <i data-lucide="lock"></i><span>@l.Title</span><small>@(l.DurationSec > 0 ? UiText.Duration(l.DurationSec) : "")</small>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <a class="lr-item" asp-action="Learn" asp-route-id="@course.Id" asp-route-lessonId="@l.Id" aria-current="@(isCurrent ? "page" : null)">
+                                        <i data-lucide="@StatusIcon(l)"></i><span>@l.Title</span>
+                                        <small>@(l.LessonType == LessonType.Quiz ? l.Questions.Count + " câu" : l.DurationSec > 0 ? UiText.Duration(l.DurationSec) : "")</small>
+                                    </a>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+        </div>
+
+        <div class="lr-side-card">
+            <strong>Giảng viên</strong>
+            <div class="lr-author small">
+                @if (!string.IsNullOrEmpty(instructor?.AvatarUrl)) { <img src="@instructor.AvatarUrl" alt="" /> }
+                else { <span class="lr-avatar">@instructor?.FullName.FirstOrDefault()</span> }
+                <div>
+                    <b>@instructor?.FullName</b>
+                    <small>@(instructor?.InstructorProfile?.Headline ?? "Giảng viên EduFlow")</small>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+@section Scripts {
+    <script src="~/js/tooltip.js" asp-append-version="true"></script>
+    <script src="~/js/learn.js" asp-append-version="true"></script>
+    <script src="~/js/learning-state.js" asp-append-version="true"></script>
+    <script src="~/js/study-clock.js" asp-append-version="true"></script>
+    <script src="~/js/community.js" asp-append-version="true"></script>
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/student-dashboard.css" asp-append-version="true"/><link rel="stylesheet" href="~/css/community.css" asp-append-version="true"/>}
+
+@if(Model.Lesson.LessonType!=LessonType.Video){<form hidden data-study-clock="@Model.Lesson.Id">@Html.AntiForgeryToken()</form>}
